@@ -1,0 +1,19 @@
+fn main () : u32 {
+    
+    if (a(10, c*d)) {
+        a = 100;
+    } else if (b) {
+        b = 100;
+    } else if (c) {
+        c = 100;
+    }
+
+    while (a < 10) {
+        a = a + 1;
+    }
+}
+
+struct vector2 {
+    x: u32;
+    y: u32;
+}

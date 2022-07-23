@@ -1,0 +1,55 @@
+program: definitions
+
+definitions: struct_def definitions
+        | proc_def definitions
+        | struct_def
+        | proc_def;
+        
+struct_def: identifier '::' 'struct' '{' fields '}'
+
+fields: identifier ':' identifier ';' fields
+        | identifier ':' identifier ';'
+        | empty
+        
+proc_def: 'fn' identifier '(' parameters ')' ':' return_type '{' statement_list '}'
+
+return_type: identifier, identifier
+        | identifier
+        | empty
+
+parameters: identifier ':' identifier ',' parameters
+        | identifier ':' identifier
+        | empty
+
+statement_list: statement statement_list
+        | statement
+        | empty
+
+statement: assigment_stmt
+        | return_statement
+        | if_statemtent
+        | while_statement
+        | expression ';'
+
+assigment_stmt : identifier '=' expression ';' # assignment
+        | 'let'identifier ':' identifier '=' expression ';' # var decl with type
+        | 'let'identifier '=' expression ';' # var decl without type
+
+while_statement: 'while' expression '{' statement_list '}'
+
+if_statement: 'if' expression '{' statement_list '}'
+
+return_statement: 'return' expressions ';'
+
+expression:  term '+' expression
+        | term '-' expression
+        | term
+
+term: factor '*' term
+        | factor '/' term
+        | factor
+
+factor: identifier
+        | identifier '(' args_list ')' # function call
+        | integer_constant
+        | '(' expression ')

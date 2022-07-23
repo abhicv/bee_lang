@@ -1,0 +1,10 @@
+struct vector2 {
+    x : u32;
+    y : u32;
+}
+
+struct Node {
+    left: Node;
+    right: Node;
+    data: u32
+}

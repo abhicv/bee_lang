@@ -1,0 +1,23 @@
+fn main (argc: u32, argv: u32) : u32 {
+    let x : u32 = 10;
+    let y = 20;
+    let sum = add(x, y);
+
+    if (type(sum) == type(x)) {
+                
+    }
+
+    if(x < y) {
+        sum = 100;
+    } else if(x == 10) {
+        sum = 1000;
+    }
+}
+
+fn add (x: u32, y: u32) : u32 {
+    let result = x + y;
+}
+
+fn add_vec3(v1: vector3, v2: vector3) : vector3 {
+
+}
