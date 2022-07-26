@@ -277,6 +277,7 @@ TokenList TokenizeSource(const char *source)
             {
                 token = TokenizeIdentifier(&lexer);
             }
+
             lexer.column += token.size;
             PushToken(&tokenList, token);
         }
@@ -448,20 +449,72 @@ TokenList TokenizeSource(const char *source)
             GetNextCharacter(&lexer);
             char c = PeekNextCharacter(&lexer);
 
-            if(c != '=')
+            Token token = {0};
+            
+            if(c == '=')
             {
-                printf("%u:%u: error: expected '!=' but found '!'\n",  lexer.line + 1, lexer.column + 1);
+                GetNextCharacter(&lexer);
+                token.type = TOKEN_GT_EQ;
+                token.opType = COMPARE_OP_NOT_EQ;
+                token.line = lexer.line;
+                token.column = lexer.column;
+                token.size = 2;
+            }
+            else 
+            {
+                token.type = TOKEN_NOT;
+                token.opType = BOOL_OP_NOT;
+                token.line = lexer.line;
+                token.column = lexer.column;
+                token.size = 1;
+            }
+
+            lexer.column += token.size;
+            PushToken(&tokenList, token);
+        }
+        else if(character == '&')
+        {
+            GetNextCharacter(&lexer);
+            char c = PeekNextCharacter(&lexer);
+            
+            if(c != '&')
+            {
+                printf("%u:%u: error: found '&' expected '&&'\n",  lexer.line + 1, lexer.column + 1);
                 exit(1);
             }
 
             GetNextCharacter(&lexer);
-
+            
             Token token = {0};
-            token.type = TOKEN_NOT_EQ;
-            token.opType = COMPARE_OP_NOT_EQ;
+            token.type = TOKEN_AND;
+            token.opType = BOOL_OP_AND;
             token.line = lexer.line;
             token.column = lexer.column;
             token.size = 2;
+         
+            lexer.column += token.size;
+            PushToken(&tokenList, token);
+        }
+        else if(character == '|')
+        {
+            GetNextCharacter(&lexer);
+            char c = PeekNextCharacter(&lexer);
+
+            if(c != '|')
+            {
+                printf("%u:%u: error: found '|' expected '||'\n",  lexer.line + 1, lexer.column + 1);
+                exit(1);
+            }
+
+            GetNextCharacter(&lexer);
+            
+            Token token = {0};
+            token.type = TOKEN_OR;
+            token.opType = BOOL_OP_OR;
+            token.line = lexer.line;
+            token.column = lexer.column;
+            token.size = 2;
+         
             lexer.column += token.size;
             PushToken(&tokenList, token);
         }
@@ -619,6 +672,9 @@ char *TokenTypeToString(unsigned int type)
         case TOKEN_GT_EQ:                   return "token_greater_than_or_equal"; break;
         case TOKEN_EQ_EQ:                   return "token_equal_equal"; break;
         case TOKEN_NOT_EQ:                  return "token_not_equal"; break;
+        case TOKEN_AND:                     return "token_and"; break;
+        case TOKEN_OR:                      return "token_or"; break;
+        case TOKEN_NOT:                     return "token_not"; break;
         case TOKEN_KEYWORD_FN:              return "token_keyword_fn"; break;
         case TOKEN_KEYWORD_STRUCT:          return "token_keyword_struct"; break;
         case TOKEN_KEYWORD_IF:              return "token_keyword_if"; break;

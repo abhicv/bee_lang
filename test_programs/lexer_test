@@ -2,13 +2,15 @@
 
 "string literal in crust programming language"
 
-__variable_name23
+_identifier_123_
 
 + - * / %
 
 < > <= >= != ==
 
 proc fn struct if else while return let
+
+&& || !
 
 ( ) { } : ; ,
 

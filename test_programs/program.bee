@@ -1,0 +1,23 @@
+fn factorial(n: u32): u32 {
+    if(n == 0 || n == 1) {
+        result = 1;
+    }
+    else {
+        result = n * factorial(n - 1);
+    }
+}
+
+fn main () : u32 {
+    if (a == 100 || b == 200 && c < 10) {
+        a = 10;
+    } else {
+        b = 100;
+    }
+
+    add(a, 100, b);
+}
+
+struct vector2 {
+    x: u32;
+    y: u32;
+}

@@ -6,5 +6,5 @@ struct vector2 {
 struct Node {
     left: Node;
     right: Node;
-    data: u32
+    data: u32;
 }

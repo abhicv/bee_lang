@@ -74,7 +74,7 @@ void PrintNode(AST ast, Index index, int indent)
         
         case NODE_PROC_DEF:
         {
-            printf("procedure def: '%s'\n", node.procName);
+            printf("function def: '%s'\n", node.procName);
             
             for(int n = 0; n < node.parameterIndexCount; n++)
             {
@@ -104,7 +104,7 @@ void PrintNode(AST ast, Index index, int indent)
         
         case NODE_PROC_CALL:
         {
-            printf("procedure call: '%s()'\n", node.procId);
+            printf("function call: '%s()'\n", node.procId);
 
             for(int n = 0; n < node.argumentsListCount; n++)
             {
@@ -199,9 +199,23 @@ void PrintNode(AST ast, Index index, int indent)
             {
                 printf("compare_op: '!='\n");
             }
-            
+            else if(node.opType == BOOL_OP_AND)
+            {
+                printf("boolean_op: '&&'\n");
+            }
+            else if(node.opType == BOOL_OP_OR)
+            {
+                printf("boolean_op: '||'\n");
+            }
+            else if(node.opType == BOOL_OP_NOT)
+            {
+                printf("boolean_op: '!'\n");
+            }
+
             PrintNode(ast, node.left, indent);
-            PrintNode(ast, node.right, indent);
+
+            if(node.opType != BOOL_OP_NOT)
+                PrintNode(ast, node.right, indent);
         }
         break;
         

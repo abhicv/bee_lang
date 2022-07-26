@@ -52,21 +52,24 @@ struct OpInfo
 };
 
 OpInfo precLookUpTable[] = {
-    [ARITHMETIC_OP_ADD] = {.precedence = 3, .associatvity = LEFT_ASSOCIATIVE},
-    [ARITHMETIC_OP_SUB] = {.precedence = 3, .associatvity = LEFT_ASSOCIATIVE},
+    [ARITHMETIC_OP_ADD] = {.precedence = 4, .associatvity = LEFT_ASSOCIATIVE},
+    [ARITHMETIC_OP_SUB] = {.precedence = 4, .associatvity = LEFT_ASSOCIATIVE},
 
-    [ARITHMETIC_OP_MUL] = {.precedence = 4, .associatvity = LEFT_ASSOCIATIVE},
-    [ARITHMETIC_OP_DIV] = {.precedence = 4, .associatvity = LEFT_ASSOCIATIVE},
-    [ARITHMETIC_OP_MOD] = {.precedence = 4, .associatvity = LEFT_ASSOCIATIVE},
+    [ARITHMETIC_OP_MUL] = {.precedence = 5, .associatvity = LEFT_ASSOCIATIVE},
+    [ARITHMETIC_OP_DIV] = {.precedence = 5, .associatvity = LEFT_ASSOCIATIVE},
+    [ARITHMETIC_OP_MOD] = {.precedence = 5, .associatvity = LEFT_ASSOCIATIVE},
 
-    [COMPARE_OP_LT] = {.precedence = 2, .associatvity = LEFT_ASSOCIATIVE},
-    [COMPARE_OP_GT] = {.precedence = 2, .associatvity = LEFT_ASSOCIATIVE},
+    [COMPARE_OP_LT] = {.precedence = 3, .associatvity = LEFT_ASSOCIATIVE},
+    [COMPARE_OP_GT] = {.precedence = 3, .associatvity = LEFT_ASSOCIATIVE},
 
-    [COMPARE_OP_EQ_EQ] = {.precedence = 1, .associatvity = LEFT_ASSOCIATIVE},
-    [COMPARE_OP_NOT_EQ] = {.precedence = 1, .associatvity = LEFT_ASSOCIATIVE},
+    [COMPARE_OP_EQ_EQ] = {.precedence = 2, .associatvity = LEFT_ASSOCIATIVE},
+    [COMPARE_OP_NOT_EQ] = {.precedence = 2, .associatvity = LEFT_ASSOCIATIVE},
 
-    [COMPARE_OP_LT_EQ] = {.precedence = 2, .associatvity = LEFT_ASSOCIATIVE},
-    [COMPARE_OP_GT_EQ] = {.precedence = 2, .associatvity = LEFT_ASSOCIATIVE}
+    [COMPARE_OP_LT_EQ] = {.precedence = 3, .associatvity = LEFT_ASSOCIATIVE},
+    [COMPARE_OP_GT_EQ] = {.precedence = 3, .associatvity = LEFT_ASSOCIATIVE},
+    
+    [BOOL_OP_AND] = {.precedence = 1, .associatvity = LEFT_ASSOCIATIVE},
+    [BOOL_OP_OR] = {.precedence = 1, .associatvity = LEFT_ASSOCIATIVE},
 };
 
 bool IsBinOpToken(unsigned int type)
@@ -81,7 +84,9 @@ bool IsBinOpToken(unsigned int type)
     type == TOKEN_EQ_EQ ||
     type == TOKEN_NOT_EQ ||
     type == TOKEN_LT_EQ ||
-    type == TOKEN_GT_EQ)
+    type == TOKEN_GT_EQ ||
+    type == TOKEN_AND ||
+    type == TOKEN_OR)
     {
         return true;
     }
@@ -166,6 +171,14 @@ Index ParseAtom(AST *ast, Parser *parser)
             return PushNode(ast, node);
         }
     }
+    else if(AcceptToken(parser, TOKEN_NOT))
+    {
+        Node node = {0};
+        node.type = NODE_OPERATOR;
+        node.opType = BOOL_OP_NOT;
+        node.left = ParseAtom(ast, parser);
+        return PushNode(ast, node);
+    }
     else if(AcceptToken(parser, TOKEN_INTEGER_CONSTANT))
     {
         Node node = {0};
@@ -179,6 +192,11 @@ Index ParseAtom(AST *ast, Parser *parser)
         ExpectToken(parser, TOKEN_CLOSE_BRACKET);
         return index;
     }
+
+    // an atom is always required    
+    Token next = PeekNextToken(parser);
+    printf("%s:%u:%u: error: expecting an expression before '%s'\n", parser->fileName, next.line+1, next.column+1, TokenTypeToString(next.type));
+    exit(1);
 }
 
 Index ParseAssignmentStatement(AST *ast, Parser *parser)
@@ -355,6 +373,7 @@ Index ParseStatementList(AST *ast, Parser *parser)
         Token token = PeekNextToken(parser);
         if(token.type == TOKEN_PROGRAM_END) break;
         else if(token.type == TOKEN_CLOSE_CURLY_BRACKET) break;
+        else if(token.type == TOKEN_SEMICOLON) { GetNextToken(parser); continue;}
 
         Index statement = ParseStatement(ast, parser);
         PushIndex(&stmtList.statementIndexList, &stmtList.statementIndexCount, statement);
@@ -369,13 +388,13 @@ Index ParseFunction(AST *ast, Parser *parser)
 {
     ExpectToken(parser, TOKEN_KEYWORD_FN);
 
-    Token procId = ExpectToken(parser, TOKEN_IDENTIFIER);
+    Token funcId = ExpectToken(parser, TOKEN_IDENTIFIER);
     
     ExpectToken(parser, TOKEN_OPEN_BRACKET);
 
     Node node = {0};
     node.type = NODE_PROC_DEF;
-    node.procName = procId.identifier;
+    node.procName = funcId.identifier;
     node.parameterIndexList = 0;
     node.parameterIndexCount = 0;
         
