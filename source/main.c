@@ -2,7 +2,7 @@
 #include "parser.c"
 #include "ast.c"
 
-int main(int argc, char *argv[argc])
+int main(int argc, char *argv[])
 {
     AST ast = {0};
     InitAST(&ast);

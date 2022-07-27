@@ -153,6 +153,14 @@ void PrintNode(AST ast, Index index, int indent)
         }
         break;
 
+        case NODE_RETURN_STATEMENT:
+        {
+            printf("return statement:\n");
+            if(node.returnExprExist)
+                PrintNode(ast, node.returnExpr, indent);
+        }
+        break;
+        
         case NODE_OPERATOR:
         {
             if(node.opType == ARITHMETIC_OP_ADD)

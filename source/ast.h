@@ -105,6 +105,12 @@ struct Node
             Index falseBlock;
         };
         
+        struct //return statement
+        {
+            Index returnExpr;
+            bool returnExprExist;
+        };
+
         struct //identifier or var decl
         {
             const char *identifier;

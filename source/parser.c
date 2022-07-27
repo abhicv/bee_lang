@@ -353,6 +353,25 @@ Index ParseStatement(AST *ast, Parser *parser)
     {
         return ParseWhileStatement(ast, parser);
     }
+    else if(token.type == TOKEN_KEYWORD_RETURN)
+    {
+        GetNextToken(parser);
+        Node node = {0};
+        node.type = NODE_RETURN_STATEMENT;
+        node.returnExprExist = false;
+        Token next = PeekNextToken(parser);
+
+        if(next.type == TOKEN_SEMICOLON)
+        {
+            GetNextToken(parser);
+            return PushNode(ast, node);
+        }
+
+        node.returnExprExist = true;
+        node.returnExpr = ParseExpression(ast, parser, 1);
+        ExpectToken(parser, TOKEN_SEMICOLON);
+        return PushNode(ast, node);
+    }
     else
     {
         Index index = ParseExpression(ast, parser, 1);
