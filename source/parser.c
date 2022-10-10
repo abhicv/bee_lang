@@ -38,20 +38,18 @@ Token ExpectToken(Parser *parser, unsigned int tokenType)
     }
 }
 
-enum OperatorAssociativity
-{
+enum OperatorAssociativity {
     LEFT_ASSOCIATIVE = 1,
     RIGHT_ASSOCIATIVE,
 };
 
 typedef struct OpInfo OpInfo;
-struct OpInfo
-{
-    int precedence;
-    int associatvity;
+struct OpInfo {
+    unsigned int precedence;
+    unsigned int associatvity;
 };
 
-OpInfo precLookUpTable[] = {
+OpInfo opInfoTable[] = {
     [ARITHMETIC_OP_ADD] = {.precedence = 4, .associatvity = LEFT_ASSOCIATIVE},
     [ARITHMETIC_OP_SUB] = {.precedence = 4, .associatvity = LEFT_ASSOCIATIVE},
 
@@ -107,7 +105,7 @@ Index ParseExpression(AST *ast, Parser *parser, int minPrec)
         Token next = PeekNextToken(parser);
         if(!IsBinOpToken(next.type)) break;
 
-        int prec = precLookUpTable[next.opType].precedence; 
+        int prec = opInfoTable[next.opType].precedence; 
         if(prec < minPrec) break;
 
         GetNextToken(parser);
@@ -117,7 +115,7 @@ Index ParseExpression(AST *ast, Parser *parser, int minPrec)
         node.opType = next.opType;
         node.left = left;
 
-        if(precLookUpTable[next.opType].associatvity == LEFT_ASSOCIATIVE)
+        if(opInfoTable[next.opType].associatvity == LEFT_ASSOCIATIVE)
         {
             node.right = ParseExpression(ast, parser, prec + 1);
         }
@@ -137,31 +135,32 @@ Index ParseAtom(AST *ast, Parser *parser)
     if(AcceptToken(parser, TOKEN_IDENTIFIER))
     {
         // function call
-        if(AcceptToken(parser, TOKEN_OPEN_BRACKET)) 
+        if(AcceptToken(parser, TOKEN_OPEN_BRACKET))
         {
-            Node procCall = {0};
-            procCall.type = NODE_PROC_CALL;
-            procCall.procId = parser->tokenList.tokens[parser->tokenIndex - 2].identifier;
+            Node funcCall = {0};
+            funcCall.type = NODE_FUNC_CALL;
+            funcCall.funcId = parser->tokenList.tokens[parser->tokenIndex - 2].identifier;
 
-            // parsing procedure arguments
+            // function arguments
             while(true)
             {
                 Token token = PeekNextToken(parser);
+
                 if(token.type == TOKEN_CLOSE_BRACKET) break;
                 else if(token.type == TOKEN_PROGRAM_END) break;
 
-                if(procCall.argumentsListCount > 0)
+                if(funcCall.argumentsListCount > 0)
                 {
                     ExpectToken(parser, TOKEN_COMMA);
                 }
 
                 Index argIndex = ParseExpression(ast, parser, 1);
-                PushIndex(&procCall.argumentsIndexList, &procCall.argumentsListCount, argIndex);
+                PushIndex(&funcCall.argumentsIndexList, &funcCall.argumentsListCount, argIndex);
             }
 
             ExpectToken(parser, TOKEN_CLOSE_BRACKET);
 
-            return PushNode(ast, procCall);
+            return PushNode(ast, funcCall);
         }
         else
         {
@@ -186,6 +185,13 @@ Index ParseAtom(AST *ast, Parser *parser)
         node.value = parser->tokenList.tokens[parser->tokenIndex - 1].integerValue;
         return PushNode(ast, node);
     }
+    else if(AcceptToken(parser, TOKEN_STRING_CONSTANT))
+    {
+        Node node = {0};
+        node.type = NODE_STRING_CONSTANT;
+        node.stringValue = parser->tokenList.tokens[parser->tokenIndex - 1].stringValue;
+        return PushNode(ast, node);
+    }
     else if(AcceptToken(parser, TOKEN_OPEN_BRACKET))
     {
         Index index = ParseExpression(ast, parser, 1);
@@ -193,77 +199,100 @@ Index ParseAtom(AST *ast, Parser *parser)
         return index;
     }
 
-    // an atom is always required    
+    // an atom is always required
     Token next = PeekNextToken(parser);
     printf("%s:%u:%u: error: expecting an expression before '%s'\n", parser->fileName, next.line+1, next.column+1, TokenTypeToString(next.type));
     exit(1);
 }
 
-Index ParseAssignmentStatement(AST *ast, Parser *parser)
+Index ParseSructFieldAccess(AST *ast, Parser *parser) 
 {
-    if(AcceptToken(parser, TOKEN_KEYWORD_LET)) // variable declaration
+    Node fieldAccessNode = {0};
+    fieldAccessNode.type = NODE_FIELD_ACCESS;
+
+    while(true)
     {
-        Token varId = ExpectToken(parser, TOKEN_IDENTIFIER);
+        Token first = GetNextToken(parser);
+        Token second = GetNextToken(parser);
 
-        Node varDecl = {0};
-        varDecl.identifier = varId.identifier;
-        varDecl.type = NODE_VAR_DECL;
-        varDecl.typeId = 0;
-        varDecl.isTypeDeclared = false;
-
-        if(AcceptToken(parser, TOKEN_EQUAL)) // without type decl
+        if(first.type == TOKEN_IDENTIFIER && second.type == TOKEN_DOT)
         {
-            Index lhs = PushNode(ast, varDecl);
-            Index rhs = ParseExpression(ast, parser, 1);
-            Node assignNode = {0};
-            assignNode.type = NODE_ASSIGN_STATEMENT;
-            assignNode.left = lhs;
-            assignNode.right = rhs;
-            return PushNode(ast, assignNode);
-        }
-        else if(AcceptToken(parser, TOKEN_COLON)) // with type decl
+            Node id = {0};
+            id.type = NODE_IDENTIFIER;
+            id.identifier = first.identifier;
+
+            Index index = PushNode(ast, id);
+            PushIndex(&fieldAccessNode.fieldIndexList, &fieldAccessNode.fieldIndexCount, index);
+        } 
+        else 
         {
-            Token varTypeId = ExpectToken(parser, TOKEN_IDENTIFIER);
-
-            varDecl.isTypeDeclared = true;
-            varDecl.typeId = varTypeId.identifier;
-            Index lhs = PushNode(ast, varDecl);
-
-            ExpectToken(parser, TOKEN_EQUAL);
-
-            Index rhs = ParseExpression(ast, parser, 1);
-            Node assignNode = {0};
-            assignNode.type = NODE_ASSIGN_STATEMENT;
-            assignNode.left = lhs;
-            assignNode.right = rhs;
-            return PushNode(ast, assignNode);
+            parser->tokenIndex -= 2;
+            break;
         }
     }
-    else if(AcceptToken(parser, TOKEN_IDENTIFIER)) // variable assignment
-    {
-        parser->tokenIndex -= 1;
-        Token varId = ExpectToken(parser, TOKEN_IDENTIFIER);
-        
-        Node id = {0};
-        id.type =  NODE_IDENTIFIER;
-        id.identifier = varId.identifier;
 
-        Index lhs = PushNode(ast, id);
+    Token token = ExpectToken(parser, TOKEN_IDENTIFIER);
 
-        ExpectToken(parser, TOKEN_EQUAL);
-            
-        Index rhs = ParseExpression(ast, parser, 1);
-        Node assignNode = {0};
-        assignNode.type = NODE_ASSIGN_STATEMENT;
-        assignNode.left = lhs;
-        assignNode.right = rhs;
+    Node id = {0};
+    id.type = NODE_IDENTIFIER;
+    id.identifier = token.identifier;
 
-        return PushNode(ast, assignNode);
-    }
+    Index index = PushNode(ast, id);
+
+    PushIndex(&fieldAccessNode.fieldIndexList, &fieldAccessNode.fieldIndexCount, index);
+
+    return PushNode(ast, fieldAccessNode);
 }
 
 Index ParseStatement(AST *ast, Parser *parser);
 Index ParseStatementList(AST *ast, Parser *parser);
+
+// TODO: parse multiple l values
+Index ParseLValue(AST *ast, Parser *parser)
+{
+    Token id = ExpectToken(parser, TOKEN_IDENTIFIER);
+    Node node = {0};
+    node.type = NODE_IDENTIFIER;
+    node.identifier = id.identifier;
+    return PushNode(ast, node);
+}
+
+Index ParseAssignmentStatement(AST *ast, Parser *parser)
+{
+    Index lvalueIndex = ParseLValue(ast, parser);
+    ExpectToken(parser, TOKEN_EQUAL);
+    Index exprIndex = ParseExpression(ast, parser, 1);
+
+    ExpectToken(parser, TOKEN_SEMICOLON);
+
+    Node assignNode = {0};
+    assignNode.type = NODE_ASSIGN_STATEMENT;
+    assignNode.left = lvalueIndex;
+    assignNode.right = exprIndex;
+
+    return PushNode(ast, assignNode);
+}
+
+Index ParseVarDeclStatement(AST *ast, Parser *parser)
+{
+    ExpectToken(parser, TOKEN_KEYWORD_LET);
+
+    Token id = ExpectToken(parser, TOKEN_IDENTIFIER);
+
+    ExpectToken(parser, TOKEN_COLON);
+
+    Token typeID = ExpectToken(parser, TOKEN_IDENTIFIER);
+
+    ExpectToken(parser, TOKEN_SEMICOLON);
+
+    Node node = {0};
+    node.type = NODE_VAR_DECL;
+    node.identifier = id.identifier;
+    node.typeId = typeID.identifier;
+    node.isTypeDeclared = true;
+
+    return PushNode(ast, node);
+}
 
 Index ParseIfStatement(AST *ast, Parser *parser)
 {
@@ -278,7 +307,7 @@ Index ParseIfStatement(AST *ast, Parser *parser)
     ifNode.type = NODE_IF_STATEMENT;
     ifNode.conditionExpr = exprIndex;
     ifNode.trueBlock = ParseStatementList(ast, parser);
-    ifNode.falseBlockExist = false;    
+    ifNode.falseBlockExist = false;
 
     // looking for else block
     if(AcceptToken(parser, TOKEN_KEYWORD_ELSE))
@@ -315,62 +344,63 @@ Index ParseWhileStatement(AST *ast, Parser *parser)
     return PushNode(ast, node);
 }
 
+Index ParseReturnStatement(AST *ast, Parser *parser)
+{
+    ExpectToken(parser, TOKEN_KEYWORD_RETURN);
+
+    Node node = {0};
+    node.type = NODE_RETURN_STATEMENT;
+    node.returnExprExist = false;
+
+    Token next = PeekNextToken(parser);
+    if(next.type == TOKEN_SEMICOLON)
+    {
+        GetNextToken(parser);
+        return PushNode(ast, node);
+    }
+
+    node.returnExprExist = true;
+    node.returnExpr = ParseExpression(ast, parser, 1);
+    
+    ExpectToken(parser, TOKEN_SEMICOLON);
+
+    return PushNode(ast, node);
+}
+
 Index ParseStatement(AST *ast, Parser *parser)
 {
     Token token = PeekNextToken(parser);
 
-    // variable declaration and initilization
     if(token.type == TOKEN_KEYWORD_LET)
     {
-        Index statementIndex = ParseAssignmentStatement(ast, parser);
-        ExpectToken(parser, TOKEN_SEMICOLON);
-        return statementIndex;
+        return ParseVarDeclStatement(ast, parser);
     }
     else if(token.type == TOKEN_IDENTIFIER)
     {
-        AcceptToken(parser, TOKEN_IDENTIFIER);
+        GetNextToken(parser);
+        Token next = PeekNextToken(parser);
 
-        if(AcceptToken(parser, TOKEN_EQUAL)) // variable assignment
-        {
-            parser->tokenIndex -= 2;
-            Index index = ParseAssignmentStatement(ast, parser);
-            ExpectToken(parser, TOKEN_SEMICOLON);
-            return index;
-        }
-        else  // expression without any assignement
-        {
-            parser->tokenIndex -= 1;
+        parser->tokenIndex -= 1;
+        
+        if(next.type == TOKEN_EQUAL) {            
+            return ParseAssignmentStatement(ast, parser);
+        } else {
             Index index = ParseExpression(ast, parser, 1);
             ExpectToken(parser, TOKEN_SEMICOLON);
             return index;
         }
     }
-    else if(token.type == TOKEN_KEYWORD_IF) // if statement
+    else if(token.type == TOKEN_KEYWORD_IF)
     {
         return ParseIfStatement(ast, parser);
     }
-    else if(token.type == TOKEN_KEYWORD_WHILE) // while statement
+    else if(token.type == TOKEN_KEYWORD_WHILE)
     {
         return ParseWhileStatement(ast, parser);
     }
     else if(token.type == TOKEN_KEYWORD_RETURN)
     {
-        GetNextToken(parser);
-        Node node = {0};
-        node.type = NODE_RETURN_STATEMENT;
-        node.returnExprExist = false;
-        Token next = PeekNextToken(parser);
-
-        if(next.type == TOKEN_SEMICOLON)
-        {
-            GetNextToken(parser);
-            return PushNode(ast, node);
-        }
-
-        node.returnExprExist = true;
-        node.returnExpr = ParseExpression(ast, parser, 1);
-        ExpectToken(parser, TOKEN_SEMICOLON);
-        return PushNode(ast, node);
+        return ParseReturnStatement(ast, parser);
     }
     else
     {
@@ -412,8 +442,8 @@ Index ParseFunction(AST *ast, Parser *parser)
     ExpectToken(parser, TOKEN_OPEN_BRACKET);
 
     Node node = {0};
-    node.type = NODE_PROC_DEF;
-    node.procName = funcId.identifier;
+    node.type = NODE_FUNC_DEF;
+    node.funcName = funcId.identifier;
     node.parameterIndexList = 0;
     node.parameterIndexCount = 0;
         
@@ -432,19 +462,11 @@ Index ParseFunction(AST *ast, Parser *parser)
         Token paramId = ExpectToken(parser, TOKEN_IDENTIFIER);
         ExpectToken(parser, TOKEN_COLON);
         Token paramType = ExpectToken(parser, TOKEN_IDENTIFIER);
-        
-        Node id = {0};
-        id.identifier = paramId.identifier;
-        id.type = NODE_IDENTIFIER;
-        
-        Node type = {0};
-        type.identifier = paramType.identifier;
-        type.type = NODE_IDENTIFIER;
-        
+
         Node field = {0};
         field.type = NODE_FIELD;
-        field.left = PushNode(ast, id);
-        field.right = PushNode(ast, type);
+        field.identifier = paramId.identifier;
+        field.typeId = paramType.identifier;
         
         Index index = PushNode(ast, field);
         PushIndex(&node.parameterIndexList, &node.parameterIndexCount, index);
@@ -478,7 +500,7 @@ Index ParseFunction(AST *ast, Parser *parser)
     }
 
     // function body    
-    node.procBody = ParseStatementList(ast, parser);
+    node.funcBody = ParseStatementList(ast, parser);
 
     return PushNode(ast, node);
 }
@@ -509,18 +531,10 @@ Index ParseStruct(AST *ast, Parser *parser)
         Token typeID = ExpectToken(parser, TOKEN_IDENTIFIER);
         ExpectToken(parser, TOKEN_SEMICOLON);
         
-        Node id = {0};
-        id.identifier = fieldId.identifier;
-        id.type = NODE_IDENTIFIER;
-        
-        Node type = {0};
-        type.identifier = typeID.identifier;
-        type.type = NODE_IDENTIFIER;
-        
         Node field = {0};
         field.type = NODE_FIELD;
-        field.left = PushNode(ast, id);
-        field.right = PushNode(ast, type);
+        field.identifier = fieldId.identifier;
+        field.typeId = typeID.identifier;
         
         Index fieldIndex = PushNode(ast, field);
         

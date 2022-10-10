@@ -19,6 +19,7 @@ Index PushNode(AST *ast, Node node)
     }
     else
     {
+        // TODO: resize list of nodes stored in AST struct
         printf("ast error: AST node list full! (capacity: %d nodes)\n", MAX_NODE_COUNT);
         exit(1);
     }
@@ -72,9 +73,9 @@ void PrintNode(AST ast, Index index, int indent)
         };
         break;
         
-        case NODE_PROC_DEF:
+        case NODE_FUNC_DEF:
         {
-            printf("function def: '%s'\n", node.procName);
+            printf("function def: '%s'\n", node.funcName);
             
             for(int n = 0; n < node.parameterIndexCount; n++)
             {
@@ -86,7 +87,7 @@ void PrintNode(AST ast, Index index, int indent)
                 PrintNode(ast, node.returnIndexList[n], indent);
             }
 
-            PrintNode(ast, node.procBody, indent);
+            PrintNode(ast, node.funcBody, indent);
         }
         break;
 
@@ -98,13 +99,23 @@ void PrintNode(AST ast, Index index, int indent)
 
         case NODE_FIELD:
         {
-            printf("field: id: '%s', type: '%s'\n", ast.nodeList[node.left].identifier, ast.nodeList[node.right].identifier);
+            printf("field: id: '%s', type: '%s'\n", node.identifier, node.typeId);
         }
         break;
-        
-        case NODE_PROC_CALL:
+
+        case NODE_FIELD_ACCESS:
         {
-            printf("function call: '%s()'\n", node.procId);
+            printf("field access:\n");
+            for(int n = 0; n < node.fieldIndexCount; n++) 
+            {
+                PrintNode(ast, node.fieldIndexList[n], indent);
+            }
+        }
+        break;
+
+        case NODE_FUNC_CALL:
+        {
+            printf("function call: '%s()'\n", node.funcId);
 
             for(int n = 0; n < node.argumentsListCount; n++)
             {
@@ -222,8 +233,10 @@ void PrintNode(AST ast, Index index, int indent)
 
             PrintNode(ast, node.left, indent);
 
-            if(node.opType != BOOL_OP_NOT)
+            if(node.opType != BOOL_OP_NOT) 
+            {
                 PrintNode(ast, node.right, indent);
+            }
         }
         break;
         
@@ -244,7 +257,7 @@ void PrintNode(AST ast, Index index, int indent)
             printf("str const: '%s'\n", node.stringValue);
         }
         break;
-        
+
         default: 
         {
             printf("not implemented\n");

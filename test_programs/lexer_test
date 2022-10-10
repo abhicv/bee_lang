@@ -1,6 +1,6 @@
 1234567890
 
-"string literal in crust programming language"
+"string literal in bee programming language"
 
 _identifier_123_
 
@@ -8,10 +8,10 @@ _identifier_123_
 
 < > <= >= != ==
 
-proc fn struct if else while return let
+fn struct if else while return let
 
 && || !
 
-( ) { } : ; ,
+( ) { } : ; , .
 
 # single line comment

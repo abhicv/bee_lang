@@ -1,0 +1,14 @@
+struct vector2 {
+    x : u32;
+    y : u32;
+}
+
+fn main () : u32 {
+    # first.second.third.fourth = 10;
+    let x = 10;
+    let y : int = 20;
+
+    while (x < y) {
+        x = x + 1;
+    }
+}

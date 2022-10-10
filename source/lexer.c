@@ -328,17 +328,29 @@ TokenList TokenizeSource(const char *source)
         else if(character == '/')
         {
             GetNextCharacter(&lexer);
+            char c = PeekNextCharacter(&lexer);
 
-            Token token = {0};
-            token.type = TOKEN_DIVIDE;
-            token.opType = ARITHMETIC_OP_DIV;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-
-            lexer.column += token.size;
-            
-            PushToken(&tokenList, token);
+            // single line comment            
+            if(c == '/') {
+                while(true)
+                {
+                    c = PeekNextCharacter(&lexer);
+                    if(c == '\n' || c == 0)
+                    {
+                        break;
+                    }
+                    GetNextCharacter(&lexer);
+                }
+            } else {
+                Token token = {0};
+                token.type = TOKEN_DIVIDE;
+                token.opType = ARITHMETIC_OP_DIV;
+                token.line = lexer.line;
+                token.column = lexer.column;
+                token.size = 1;
+                lexer.column += token.size;    
+                PushToken(&tokenList, token);
+            }
         }
         else if(character == '%')
         {
@@ -609,6 +621,19 @@ TokenList TokenizeSource(const char *source)
             lexer.column += token.size;
             PushToken(&tokenList, token);
         }
+        else if(character == '.')
+        {            
+            GetNextCharacter(&lexer);
+
+            Token token = {0};
+            token.type = TOKEN_DOT;
+            token.line = lexer.line;
+            token.column = lexer.column;
+            token.size = 1;
+            
+            lexer.column += token.size;
+            PushToken(&tokenList, token);
+        }
         else if(character == 0)
         {
             Token token = {0};
@@ -628,20 +653,6 @@ TokenList TokenizeSource(const char *source)
         {
             lexer.column++;
             GetNextCharacter(&lexer);
-        }
-        else if(character == '#') // single line comments
-        {
-            GetNextCharacter(&lexer);
-            char c = PeekNextCharacter(&lexer);
-            while(true)
-            {
-                c = PeekNextCharacter(&lexer);
-                if(c == '\n' || c == 0)
-                {
-                    break;
-                }
-                GetNextCharacter(&lexer);
-            }
         }
         else
         {
@@ -689,6 +700,7 @@ char *TokenTypeToString(unsigned int type)
         case TOKEN_COLON:                   return "token_colon"; break;
         case TOKEN_SEMICOLON:               return "token_semicolon"; break;
         case TOKEN_COMMA:                   return "token_comma"; break;
+        case TOKEN_DOT:                     return "token_dot"; break;
         case TOKEN_PROGRAM_END:             return "token_program_end"; break;
         case TOKEN_COUNT:                   return "token_count"; break;
         default:                            return "unknown_token_type";

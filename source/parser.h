@@ -9,13 +9,12 @@
 #include "lexer.h"
 #include "ast.h"
 
-typedef struct Parser Parser;
-struct Parser
-{
+typedef struct {
     const char *fileName;
     const char *source;   
     TokenList tokenList;
     unsigned int tokenIndex;
-};
+} Parser;
+
 
 #endif //PARSER_H

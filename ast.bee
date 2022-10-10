@@ -1,5 +1,5 @@
 size of ast node: 48 bytes
-token count: 98
+token count: 96
 +- program:
    +- function def: 'factorial'
       +- field: id: 'n', type: 'u32'
@@ -14,12 +14,10 @@ token count: 98
                   +- id: 'n'
                   +- int const: '1'
             +- statement block: '{}'
-               +- assign statement: '='
-                  +- id: 'result'
+               +- return statement:
                   +- int const: '1'
             +- statement block: '{}'
-               +- assign statement: '='
-                  +- id: 'result'
+               +- return statement:
                   +- math_op: '*'
                      +- id: 'n'
                      +- function call: 'factorial()'
@@ -56,4 +54,4 @@ token count: 98
    +- struct def: 'vector2'
       +- field: id: 'x', type: 'u32'
       +- field: id: 'y', type: 'u32'
-ast list memory usage: 2976 bytes
+ast list memory usage: 2880 bytes

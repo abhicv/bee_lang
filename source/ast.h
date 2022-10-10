@@ -9,23 +9,24 @@
 enum NodeType
 {
     NODE_PROGRAM = 1,
-    NODE_PROC_DEF,
+    NODE_FUNC_DEF,
     NODE_STRUCT_DEF,
     NODE_VAR_DECL,
     NODE_FIELD,
+    NODE_FIELD_ACCESS,
     NODE_OPERATOR,
     NODE_STATEMENT_LIST,
     NODE_ASSIGN_STATEMENT,
     NODE_IF_STATEMENT,
     NODE_WHILE_STATEMENT,
     NODE_RETURN_STATEMENT,
-    NODE_PROC_CALL,
+    NODE_FUNC_CALL,
     NODE_IDENTIFIER,
     NODE_INTEGER_CONSTANT,
-    NODE_STRING_CONSTANT,    
+    NODE_STRING_CONSTANT,
 };
 
-enum Operators
+enum OperatorType
 {
     ARITHMETIC_OP_ADD = 1,
     ARITHMETIC_OP_SUB,
@@ -45,11 +46,9 @@ enum Operators
     BOOL_OP_NOT,
 };
 
-typedef unsigned int Index;
+typedef int Index;
 
-typedef struct Node Node;
-struct Node
-{
+typedef struct {
     unsigned int type;
     
     union
@@ -60,26 +59,26 @@ struct Node
             unsigned int indexCount;
         };
         
-        struct //struct def
+        struct //struct def and struct field access
         {
             const char *structName;
             Index *fieldIndexList;
             unsigned int fieldIndexCount;
         };
         
-        struct // procedure def
+        struct // function definition
         {
-            const char *procName;
+            const char *funcName;
             Index *parameterIndexList;
             unsigned int parameterIndexCount;
             Index *returnIndexList;
             unsigned int returnIndexCount;
-            Index procBody;
+            Index funcBody;
         };
 
-        struct// procedure call
+        struct// function call
         {
-            const char *procId;
+            const char *funcId;
             Index *argumentsIndexList;
             unsigned int argumentsListCount;
         };
@@ -90,7 +89,7 @@ struct Node
             unsigned statementIndexCount;
         };
 
-        struct // binary operator or assignemnt statement
+        struct // binary operator or assignment statement
         {
             unsigned int opType;
             Index left;
@@ -128,14 +127,12 @@ struct Node
             const char *stringValue;
         };
     };
-};
+} Node;
 
-typedef struct AST AST;
-struct AST
-{
+typedef struct {
     Node *nodeList;
     unsigned int nodeCount;
-};
+} AST;
 
 void InitAST(AST *ast);
 Index PushNode(AST *ast, Node node);

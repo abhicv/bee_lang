@@ -54,23 +54,20 @@ enum TokenType
     TOKEN_COLON,
     TOKEN_SEMICOLON,
     TOKEN_COMMA,
+    TOKEN_DOT,
 
     TOKEN_PROGRAM_END,
 
     TOKEN_COUNT,
 };
 
-typedef struct Keyword Keyword;
-struct Keyword
-{
+typedef struct {
     char *keywordString;
     unsigned int len;
     unsigned int tokenType;
-};
+} Keyword;
 
-typedef struct Token Token;
-struct Token
-{
+typedef struct {
     unsigned int type;
     
     // token data
@@ -83,22 +80,18 @@ struct Token
     unsigned int size;
     unsigned int column;
     unsigned int line;
-};
+} Token;
 
-typedef struct Lexer Lexer;
-struct Lexer
-{
+typedef struct {
+    Token *tokens;
+    unsigned int count;
+} TokenList;
+
+typedef struct {
     const char *source;
     unsigned int pos;
     unsigned int line;
     unsigned int column;
-};
-
-typedef struct TokenList TokenList;
-struct TokenList
-{
-    Token *tokens;
-    unsigned int count;
-};
+} Lexer;
 
 #endif
