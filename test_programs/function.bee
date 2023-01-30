@@ -1,6 +1,6 @@
 fn main (argc: u32, argv: u32) : u32 {
-    let x = 10;
-    let y = 20;
+    let x: u32 = 100 * 0;
+    let y : i32 = 200;
     let sum = add(x, y) + add(100, 200);
     return 0;
 }

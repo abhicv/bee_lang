@@ -535,7 +535,7 @@ TokenList TokenizeSource(const char *source)
             GetNextCharacter(&lexer);
 
             Token token = {0};
-            token.type = TOKEN_OPEN_BRACKET;
+            token.type = TOKEN_LEFT_PAREN;
             token.line = lexer.line;
             token.column = lexer.column;
             token.size = 1;
@@ -548,7 +548,7 @@ TokenList TokenizeSource(const char *source)
             GetNextCharacter(&lexer);
 
             Token token = {0};
-            token.type = TOKEN_CLOSE_BRACKET;
+            token.type = TOKEN_RIGHT_PAREN;
             token.line = lexer.line;
             token.column = lexer.column;
             token.size = 1;
@@ -561,7 +561,7 @@ TokenList TokenizeSource(const char *source)
             GetNextCharacter(&lexer);
 
             Token token = {0};
-            token.type = TOKEN_OPEN_CURLY_BRACKET;
+            token.type = TOKEN_LEFT_BRACE;
             token.line = lexer.line;
             token.column = lexer.column;
             token.size = 1;
@@ -574,7 +574,33 @@ TokenList TokenizeSource(const char *source)
             GetNextCharacter(&lexer);
 
             Token token = {0};
-            token.type = TOKEN_CLOSE_CURLY_BRACKET;
+            token.type = TOKEN_RIGHT_BRACE;
+            token.line = lexer.line;
+            token.column = lexer.column;
+            token.size = 1;
+            
+            lexer.column += token.size;
+            PushToken(&tokenList, token);
+        }
+        else if(character == '[')
+        {
+            GetNextCharacter(&lexer);
+
+            Token token = {0};
+            token.type = TOKEN_LEFT_BRACKET;
+            token.line = lexer.line;
+            token.column = lexer.column;
+            token.size = 1;
+            
+            lexer.column += token.size;
+            PushToken(&tokenList, token);
+        }
+        else if(character == ']')
+        {
+            GetNextCharacter(&lexer);
+
+            Token token = {0};
+            token.type = TOKEN_RIGHT_BRACKET;
             token.line = lexer.line;
             token.column = lexer.column;
             token.size = 1;
@@ -693,16 +719,18 @@ char *TokenTypeToString(unsigned int type)
         case TOKEN_KEYWORD_WHILE:           return "token_keyword_while"; break;
         case TOKEN_KEYWORD_RETURN:          return "token_keyword_return"; break;
         case TOKEN_KEYWORD_LET:             return "token_keyword_let"; break;
-        case TOKEN_OPEN_BRACKET:            return "token_open_bracket"; break;
-        case TOKEN_CLOSE_BRACKET:           return "token_close_bracket"; break;
-        case TOKEN_OPEN_CURLY_BRACKET:      return "token_open_curly_bracket"; break;
-        case TOKEN_CLOSE_CURLY_BRACKET:     return "token_close_curly_bracket"; break;
+        case TOKEN_LEFT_PAREN:              return "token_left_paren"; break;
+        case TOKEN_RIGHT_PAREN:             return "token_right_paren"; break;
+        case TOKEN_LEFT_BRACE:              return "token_left_brace"; break;
+        case TOKEN_RIGHT_BRACE:             return "token_right_brace"; break;
+        case TOKEN_LEFT_BRACKET:            return "token_left_bracket"; break;
+        case TOKEN_RIGHT_BRACKET:           return "token_right_bracket"; break;
         case TOKEN_COLON:                   return "token_colon"; break;
         case TOKEN_SEMICOLON:               return "token_semicolon"; break;
         case TOKEN_COMMA:                   return "token_comma"; break;
         case TOKEN_DOT:                     return "token_dot"; break;
         case TOKEN_PROGRAM_END:             return "token_program_end"; break;
-        case TOKEN_COUNT:                   return "token_count"; break;
+        case TOKEN_TYPE_COUNT:              return "token_count"; break;
         default:                            return "unknown_token_type";
     }
 }

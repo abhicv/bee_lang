@@ -1,0 +1,92 @@
+program: definitions
+
+definitions: 
+        | struct_def definitions
+        | function_def definitions
+        | struct_def
+        | function_def
+        
+struct_def: 
+        | 'struct' identifier '{' struct_fields '}'
+
+type_annotation: 
+        | identifier
+        | identifier '[' number_literal ']'
+
+struct_fields: 
+        | identifier ':' type_annotation ';' struct_fields
+        | identifier ':' type_annotation ';'
+        | empty
+        
+parameters: 
+        | identifier ':' type_annotation ',' parameters
+        | identifier ':' type_annotation
+        | empty
+
+function_def: 
+        | 'fn' identifier '(' parameters ')' ':' type_annotation '{' statement_list '}'
+
+struct_field_access : 
+        | identifier '.' struct_field_access
+        | identifier
+
+l_value : 
+        | identifier
+        | struct_field_access
+        | identifier '[' expression ']'
+
+statement_list: 
+        | statement statement_list
+        | statement
+        | empty
+
+statement: 
+        | assignment_stmt
+        | var_decl_stmt
+        | return_statement
+        | if_statement
+        | while_statement
+        | expr ';'
+
+assignment_stmt : 
+        | l_value '=' expr ';'
+
+var_decl_stmt: 
+        | 'let' identifier : type_annotation ';'
+        | 'let' identifier : type_annotation '=' expr ';'
+
+while_statement: 
+        | 'while' '(' expr ')' '{' statement_list '}'
+
+if_statement: 
+        | 'if' '(' expr ')' '{' statement_list '}'
+        | 'if' '(' expr ')' '{' statement_list '} else '{' statement_list '}'
+        | 'if' '(' expr ')' '{' statement_list '} else if_statement
+
+return_statement: 'return' expr ';'
+
+function_call: 
+        | identifier '(' arg_list ')
+
+expr : 
+        | expr '+' expr
+        | expr '-' expr
+        | expr '*' expr
+        | expr '/' expr
+        | expr '%' expr
+        | expr '<' expr
+        | expr '>' expr
+        | expr '<=' expr
+        | expr '>=' expr
+        | expr '!=' expr
+        | expr '==' expr
+        | expr '&&' expr
+        | expr '||' expr
+        | l_value
+        | function_call        
+        | integer_constant
+        | string_constant
+
+arg_list:
+        | expr ',' arg_list
+        | expr

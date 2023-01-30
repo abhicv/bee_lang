@@ -55,103 +55,117 @@ void PrintNode(AST ast, Index index, int indent)
         {
             printf("program:\n");
             
-            for(int n = 0; n < node.indexCount; n++)
+            for(int n = 0; n < node.program.defCount; n++)
             {
-                PrintNode(ast, node.indexList[n], indent);
+                PrintNode(ast, node.program.definitions[n], indent);
             }
         };
         break;
         
         case NODE_STRUCT_DEF:
         {
-            printf("struct def: '%s'\n", node.structName);
+            printf("struct def: '%s'\n", node.structDef.name);
             
-            for(int n = 0; n < node.fieldIndexCount; n++)
+            for(int n = 0; n < node.structDef.fieldCount; n++)
             {
-                PrintNode(ast, node.fieldIndexList[n], indent);
+                PrintNode(ast, node.structDef.fields[n], indent);
             }
         };
         break;
         
         case NODE_FUNC_DEF:
         {
-            printf("function def: '%s'\n", node.funcName);
+            printf("function def: '%s'\n", node.functionDef.name);
             
-            for(int n = 0; n < node.parameterIndexCount; n++)
+            for(int n = 0; n < node.functionDef.parameterCount; n++)
             {
-                PrintNode(ast, node.parameterIndexList[n], indent);
-            }
-            
-            for(int n = 0; n < node.returnIndexCount; n++)
-            {
-                PrintNode(ast, node.returnIndexList[n], indent);
+                PrintNode(ast, node.functionDef.parameters[n], indent);
             }
 
-            PrintNode(ast, node.funcBody, indent);
+            PrintNode(ast, node.functionDef.returnType, indent);
+            PrintNode(ast, node.functionDef.body, indent);
         }
         break;
 
         case NODE_VAR_DECL:
         {
-            printf("var decl : id: '%s', type: '%s'\n", node.identifier, node.isTypeDeclared ? node.typeId : "(infer type)");
+            printf("var decl : \n");
+            PrintNode(ast, node.varDecl.id, indent);
+            PrintNode(ast, node.varDecl.type, indent);
         }
-        break; 
+        break;
 
         case NODE_FIELD:
         {
-            printf("field: id: '%s', type: '%s'\n", node.identifier, node.typeId);
+            printf("field: \n");
+            PrintNode(ast, node.field.id, indent);
+            PrintNode(ast, node.field.type, indent);
+        }
+        break;
+
+        case NODE_PARAM:
+        {
+            printf("param: \n");
+            PrintNode(ast, node.param.id, indent);
+            PrintNode(ast, node.param.type, indent);
+        }
+        break;
+
+        case NODE_TYPE_ANNOTATION: 
+        {
+            printf("type: id: '%s', is_array: %s, dim: %d\n", node.typeAnnotation.id, node.typeAnnotation.isArrayType ? "true" : "false", node.typeAnnotation.arrayDim);
         }
         break;
 
         case NODE_FIELD_ACCESS:
         {
             printf("field access:\n");
-            for(int n = 0; n < node.fieldIndexCount; n++) 
-            {
-                PrintNode(ast, node.fieldIndexList[n], indent);
-            }
+            // for(int n = 0; n < node.fieldIndexCount; n++) 
+            // {
+            //     PrintNode(ast, node.fieldIndexList[n], indent);
+            // }
         }
         break;
 
         case NODE_FUNC_CALL:
         {
-            printf("function call: '%s()'\n", node.funcId);
+            printf("function call: '%s()'\n", node.functionCall.id);
 
-            for(int n = 0; n < node.argumentsListCount; n++)
+            for(int n = 0; n < node.functionCall.argumentCount; n++)
             {
-                PrintNode(ast, node.argumentsIndexList[n], indent);                
+                PrintNode(ast, node.functionCall.arguments[n], indent);                
             }
         }
         break;
 
         case NODE_STATEMENT_LIST:
         {
-            printf("statement block: '%s'\n", node.statementIndexCount == 0 ? "{empty}" : "{}");
+            printf("statement block: '%s'\n", node.statementList.statementCount == 0 ? "{empty}" : "{}");
 
-            for(int n = 0; n < node.statementIndexCount; n++)
+            for(int n = 0; n < node.statementList.statementCount; n++)
             {
-                PrintNode(ast, node.statementIndexList[n], indent);
+                PrintNode(ast, node.statementList.statements[n], indent);
             }
         }
         break;
 
         case NODE_ASSIGN_STATEMENT:
         {
-            printf("assign statement: '='\n");
-            PrintNode(ast, node.left, indent);
-            PrintNode(ast, node.right, indent);
+            printf("assignment statement: '='\n");
+            PrintNode(ast, node.assignStmt.lValue, indent);
+            PrintNode(ast, node.assignStmt.expression, indent);
         }
         break;
 
         case NODE_IF_STATEMENT:
         {
             printf("if statement:\n");
-            PrintNode(ast, node.conditionExpr, indent);
-            PrintNode(ast, node.trueBlock, indent);
+            PrintNode(ast, node.ifStmt.conditionExpr, indent);
+            PrintNode(ast, node.ifStmt.trueBlock, indent);
 
-            if(node.falseBlockExist)
+            if(node.ifStmt.falseBlockExist)
             {
-                PrintNode(ast, node.falseBlock, indent);
+                PrintNode(ast, node.ifStmt.falseBlock, indent);
             }
         }
         break;
@@ -159,102 +173,101 @@ void PrintNode(AST ast, Index index, int indent)
         case NODE_WHILE_STATEMENT:
         {
             printf("while statement:\n");
-            PrintNode(ast, node.conditionExpr, indent);
-            PrintNode(ast, node.trueBlock, indent);
+            PrintNode(ast, node.whileStmt.conditionExpr, indent);
+            PrintNode(ast, node.whileStmt.block, indent);
         }
         break;
 
         case NODE_RETURN_STATEMENT:
         {
             printf("return statement:\n");
-            if(node.returnExprExist)
-                PrintNode(ast, node.returnExpr, indent);
-        }
+            if(node.returnStmt.exprExist) PrintNode(ast, node.returnStmt.expression, indent);
+        }   
         break;
         
         case NODE_OPERATOR:
         {
-            if(node.opType == ARITHMETIC_OP_ADD)
+            if(node.operator.opType == ARITHMETIC_OP_ADD)
             {
                 printf("math_op: '+'\n");
             }
-            else if(node.opType == ARITHMETIC_OP_SUB)
+            else if(node.operator.opType == ARITHMETIC_OP_SUB)
             {
                 printf("math_op: '-'\n");
             }
-            else if(node.opType == ARITHMETIC_OP_MUL)
+            else if(node.operator.opType == ARITHMETIC_OP_MUL)
             {
                 printf("math_op: '*'\n");
             }
-            else if(node.opType == ARITHMETIC_OP_DIV)
+            else if(node.operator.opType == ARITHMETIC_OP_DIV)
             {
                 printf("math_op: '/'\n");
             }
-            else if(node.opType == ARITHMETIC_OP_MOD)
+            else if(node.operator.opType == ARITHMETIC_OP_MOD)
             {
                 printf("math_op: '%%'\n");
             }
-            else if(node.opType == COMPARE_OP_LT)
+            else if(node.operator.opType == COMPARE_OP_LT)
             {
                 printf("compare_op: '<'\n");
             }
-            else if(node.opType == COMPARE_OP_GT)
+            else if(node.operator.opType == COMPARE_OP_GT)
             {
                 printf("compare_op: '>'\n");
             }
-            else if(node.opType == COMPARE_OP_LT_EQ)
+            else if(node.operator.opType == COMPARE_OP_LT_EQ)
             {
                 printf("compare_op: '<='\n");
             }
-            else if(node.opType == COMPARE_OP_GT_EQ)
+            else if(node.operator.opType == COMPARE_OP_GT_EQ)
             {
                 printf("compare_op: '>='\n");
             }
-            else if(node.opType == COMPARE_OP_EQ_EQ)
+            else if(node.operator.opType == COMPARE_OP_EQ_EQ)
             {
                 printf("compare_op: '=='\n");
             }
-            else if(node.opType == COMPARE_OP_NOT_EQ)
+            else if(node.operator.opType == COMPARE_OP_NOT_EQ)
             {
                 printf("compare_op: '!='\n");
             }
-            else if(node.opType == BOOL_OP_AND)
+            else if(node.operator.opType == BOOL_OP_AND)
             {
                 printf("boolean_op: '&&'\n");
             }
-            else if(node.opType == BOOL_OP_OR)
+            else if(node.operator.opType == BOOL_OP_OR)
             {
                 printf("boolean_op: '||'\n");
             }
-            else if(node.opType == BOOL_OP_NOT)
+            else if(node.operator.opType == BOOL_OP_NOT)
             {
                 printf("boolean_op: '!'\n");
             }
 
-            PrintNode(ast, node.left, indent);
+            PrintNode(ast, node.operator.left, indent);
 
-            if(node.opType != BOOL_OP_NOT) 
+            if(node.operator.opType != BOOL_OP_NOT) 
             {
-                PrintNode(ast, node.right, indent);
+                PrintNode(ast, node.operator.right, indent);
             }
         }
         break;
         
         case NODE_IDENTIFIER:
         {
-            printf("id: '%s'\n", node.identifier);
+            printf("id: '%s'\n", node.identifier.value);
         }
         break;
         
         case NODE_INTEGER_CONSTANT:
         {
-            printf("int const: '%d'\n", node.value);
+            printf("integer const: '%d'\n", node.integer.value);
         }
         break;
         
         case NODE_STRING_CONSTANT:
         {
-            printf("str const: '%s'\n", node.stringValue);
+            printf("string const: '%s'\n", node.string.value);
         }
         break;
 

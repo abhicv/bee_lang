@@ -13,6 +13,7 @@ enum NodeType
     NODE_STRUCT_DEF,
     NODE_VAR_DECL,
     NODE_FIELD,
+    NODE_PARAM,
     NODE_FIELD_ACCESS,
     NODE_OPERATOR,
     NODE_STATEMENT_LIST,
@@ -24,6 +25,7 @@ enum NodeType
     NODE_IDENTIFIER,
     NODE_INTEGER_CONSTANT,
     NODE_STRING_CONSTANT,
+    NODE_TYPE_ANNOTATION,
 };
 
 enum OperatorType
@@ -53,79 +55,96 @@ typedef struct {
     
     union
     {
-        struct //program
+        struct
         {
-            Index *indexList;
-            unsigned int indexCount;
-        };
+            Index *definitions;
+            unsigned int defCount;
+        } program;
+    
+        struct
+        {
+            const char *name;
+            Index *fields;
+            unsigned int fieldCount;
+        } structDef;
         
-        struct //struct def and struct field access
+        struct
         {
-            const char *structName;
-            Index *fieldIndexList;
-            unsigned int fieldIndexCount;
-        };
-        
-        struct // function definition
-        {
-            const char *funcName;
-            Index *parameterIndexList;
-            unsigned int parameterIndexCount;
-            Index *returnIndexList;
-            unsigned int returnIndexCount;
-            Index funcBody;
-        };
+            const char *name; 
+            Index *parameters;
+            unsigned int parameterCount;
+            Index returnType;
+            Index body;
+        } functionDef;
 
-        struct// function call
+        struct
         {
-            const char *funcId;
-            Index *argumentsIndexList;
-            unsigned int argumentsListCount;
-        };
-
-        struct // statement block
+            const char *id;
+            Index *arguments;
+            unsigned int argumentCount;
+        } functionCall;
+ 
+        struct
         {
-            Index *statementIndexList;
-            unsigned statementIndexCount;
-        };
+            Index *statements;
+            unsigned int statementCount;
+        } statementList;
 
-        struct // binary operator or assignment statement
+        struct 
         {
             unsigned int opType;
             Index left;
             Index right;
-        };
-        
-        struct // while and if-else statement
+        } operator;
+
+        struct 
+        {
+            Index lValue;
+            Index expression;
+        } assignStmt;
+
+        struct 
+        {
+            Index conditionExpr;
+            Index block;
+        } whileStmt;
+
+        struct 
         {
             Index conditionExpr;
             Index trueBlock;
             bool falseBlockExist;
             Index falseBlock;
-        };
+        } ifStmt;
+
+        struct 
+        {
+            Index expression;
+            bool exprExist;
+        } returnStmt;
         
-        struct //return statement
+        struct //identifier or var decl or type annotation or field
         {
-            Index returnExpr;
-            bool returnExprExist;
-        };
+            const char* id;
+            unsigned int arrayDim;
+            bool isArrayType;
+        } typeAnnotation;
 
-        struct //identifier or var decl
+        struct 
         {
-            const char *identifier;
-            const char *typeId;
-            bool isTypeDeclared;
-        };
+            Index id;
+            Index type;
+        } varDecl, param, field;
 
-        struct //integer constant
+        struct
         {
             int value;
-        };
+        } integer;
 
-        struct // string constant
+        struct
         {
-            const char *stringValue;
-        };
+            const char* value;
+        } string, identifier;
     };
 } Node;
 

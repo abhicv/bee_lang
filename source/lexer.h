@@ -47,18 +47,20 @@ enum TokenType
     TOKEN_KEYWORD_LET,
     TOKEN_KEYWORD_RETURN,
 
-    TOKEN_OPEN_BRACKET,
-    TOKEN_CLOSE_BRACKET,
-    TOKEN_OPEN_CURLY_BRACKET,
-    TOKEN_CLOSE_CURLY_BRACKET,
-    TOKEN_COLON,
-    TOKEN_SEMICOLON,
-    TOKEN_COMMA,
-    TOKEN_DOT,
+    TOKEN_LEFT_PAREN, // '('
+    TOKEN_RIGHT_PAREN, // ')'
+    TOKEN_LEFT_BRACE, // '{'
+    TOKEN_RIGHT_BRACE, // '}'
+    TOKEN_LEFT_BRACKET, // '['
+    TOKEN_RIGHT_BRACKET, // ']'
+    TOKEN_COLON, // ':'
+    TOKEN_SEMICOLON, // ';' 
+    TOKEN_COMMA, // ','
+    TOKEN_DOT, // '.'
 
     TOKEN_PROGRAM_END,
 
-    TOKEN_COUNT,
+    TOKEN_TYPE_COUNT,
 };
 
 typedef struct {
@@ -80,6 +82,7 @@ typedef struct {
     unsigned int size;
     unsigned int column;
     unsigned int line;
+    
 } Token;
 
 typedef struct {

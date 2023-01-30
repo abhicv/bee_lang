@@ -16,5 +16,4 @@ typedef struct {
     unsigned int tokenIndex;
 } Parser;
 
-
 #endif //PARSER_H

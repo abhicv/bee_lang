@@ -1,8 +1,7 @@
-#include "parser.h"
 
-Token GetNextToken(Parser *parser)
+fn GetNextToken(Parser *parser) : Token
 {
-    return parser->tokenList.tokens[parser->tokenIndex++];
+    return tokens[tokenIndex++];
 }
 
 Token PeekNextToken(Parser *parser)
@@ -38,37 +37,10 @@ Token ExpectToken(Parser *parser, unsigned int tokenType)
     }
 }
 
-enum OperatorAssociativity {
-    LEFT_ASSOCIATIVE = 1,
-    RIGHT_ASSOCIATIVE,
-};
-
-typedef struct OpInfo OpInfo;
 struct OpInfo {
-    unsigned int precedence;
-    unsigned int associatvity;
-};
-
-OpInfo opInfoTable[] = {
-    [ARITHMETIC_OP_ADD] = {.precedence = 4, .associatvity = LEFT_ASSOCIATIVE},
-    [ARITHMETIC_OP_SUB] = {.precedence = 4, .associatvity = LEFT_ASSOCIATIVE},
-
-    [ARITHMETIC_OP_MUL] = {.precedence = 5, .associatvity = LEFT_ASSOCIATIVE},
-    [ARITHMETIC_OP_DIV] = {.precedence = 5, .associatvity = LEFT_ASSOCIATIVE},
-    [ARITHMETIC_OP_MOD] = {.precedence = 5, .associatvity = LEFT_ASSOCIATIVE},
-
-    [COMPARE_OP_LT] = {.precedence = 3, .associatvity = LEFT_ASSOCIATIVE},
-    [COMPARE_OP_GT] = {.precedence = 3, .associatvity = LEFT_ASSOCIATIVE},
-
-    [COMPARE_OP_EQ_EQ] = {.precedence = 2, .associatvity = LEFT_ASSOCIATIVE},
-    [COMPARE_OP_NOT_EQ] = {.precedence = 2, .associatvity = LEFT_ASSOCIATIVE},
-
-    [COMPARE_OP_LT_EQ] = {.precedence = 3, .associatvity = LEFT_ASSOCIATIVE},
-    [COMPARE_OP_GT_EQ] = {.precedence = 3, .associatvity = LEFT_ASSOCIATIVE},
-    
-    [BOOL_OP_AND] = {.precedence = 1, .associatvity = LEFT_ASSOCIATIVE},
-    [BOOL_OP_OR] = {.precedence = 1, .associatvity = LEFT_ASSOCIATIVE},
-};
+    precedence : int;
+    associatvity : int;
+}
 
 bool IsBinOpToken(unsigned int type)
 {
