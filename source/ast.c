@@ -117,13 +117,21 @@ void PrintNode(AST ast, Index index, int indent)
         }
         break;
 
-        case NODE_FIELD_ACCESS:
+        case NODE_L_VALUE:
         {
-            printf("field access:\n");
-            // for(int n = 0; n < node.fieldIndexCount; n++) 
-            // {
-            //     PrintNode(ast, node.fieldIndexList[n], indent);
-            // }
+            printf("l value:\n");
+            for(int n = 0; n < node.lValue.simpleLValueCount; n++) 
+            {
+                PrintNode(ast, node.lValue.simpleLValues[n], indent);
+            }
+        }
+        break;
+
+        case NODE_ARRAY_ACCESS:
+        {
+            printf("array access:\n");
+            PrintNode(ast, node.arrayAccess.id, indent);
+            PrintNode(ast, node.arrayAccess.expr, indent);
         }
         break;
 

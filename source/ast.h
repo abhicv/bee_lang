@@ -14,7 +14,8 @@ enum NodeType
     NODE_VAR_DECL,
     NODE_FIELD,
     NODE_PARAM,
-    NODE_FIELD_ACCESS,
+    NODE_L_VALUE,
+    NODE_ARRAY_ACCESS,
     NODE_OPERATOR,
     NODE_STATEMENT_LIST,
     NODE_ASSIGN_STATEMENT,
@@ -123,7 +124,7 @@ typedef struct {
             bool exprExist;
         } returnStmt;
         
-        struct //identifier or var decl or type annotation or field
+        struct         
         {
             const char* id;
             unsigned int arrayDim;
@@ -135,6 +136,18 @@ typedef struct {
             Index id;
             Index type;
         } varDecl, param, field;
+
+        struct 
+        {
+            Index *simpleLValues;
+            unsigned int simpleLValueCount;            
+        } lValue;
+
+        struct 
+        {
+            Index id;
+            Index expr;            
+        } arrayAccess;
 
         struct
         {
