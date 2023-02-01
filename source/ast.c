@@ -82,7 +82,11 @@ void PrintNode(AST ast, Index index, int indent)
                 PrintNode(ast, node.functionDef.parameters[n], indent);
             }
 
-            PrintNode(ast, node.functionDef.returnType, indent);
+            if(node.functionDef.isReturnTypeDeclared)
+            {
+                PrintNode(ast, node.functionDef.returnType, indent);
+            }
+
             PrintNode(ast, node.functionDef.body, indent);
         }
         break;

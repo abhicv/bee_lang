@@ -1,8 +1,6 @@
 struct vector2 {
     x : int;
     y : int;
-    a: int [10];
-    b: string;
 }
 
 struct String {
@@ -10,11 +8,22 @@ struct String {
     length: int;
 }
 
+fn vector2_add(a: vector2, b: vector2) : vector2 {
+    let result: vector2 = 0;
+    result.x = a.x + b.x; 
+    result.y = a.y + b.y;
+    return result;
+}
+
+fn simple() {}
+
 fn start (arg: int [30], a : int) : int {
-    let x : int [5] = 100;
+    let x : int [5] = 0;
+    x[0] = 10;
+    x[1] = 20;
+
     let y : int = 20;
     let msg : string = "Hey, Sailor!";
-    let msg : str [10] = "Hey, Sailor!";
     
     if (a) {
         print(a);
@@ -24,14 +33,17 @@ fn start (arg: int [30], a : int) : int {
         print(10);
     }
 
-    let x: int [10] = 0;
-    
     let n : int = 0;
     while (n < 10) {
         x[n] = n * 2;
         n = n + 1;
     }
 
-    first.second.third = qwerty + asdfg.zxcv;
-    x = asdfg[10].zxcv[20];
+    let s: String = 0;
+    
+    let n : int = 0;
+    while (n < s.length) {
+        print(s.data[n]);
+        n = n + 1;
+    }
 }

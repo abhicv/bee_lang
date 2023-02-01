@@ -1,57 +1,171 @@
-size of ast node: 48 bytes
-token count: 96
+size of ast node: 40 bytes
+token count: 240
+parsing completed, AST build complete
+AST memory usage: 6760 bytes
 +- program:
-   +- function def: 'factorial'
-      +- field: id: 'n', type: 'u32'
-      +- id: 'u32'
-      +- statement block: '{}'
-         +- if statement:
-            +- boolean_op: '||'
-               +- compare_op: '=='
-                  +- id: 'n'
-                  +- int const: '0'
-               +- compare_op: '=='
-                  +- id: 'n'
-                  +- int const: '1'
-            +- statement block: '{}'
-               +- return statement:
-                  +- int const: '1'
-            +- statement block: '{}'
-               +- return statement:
-                  +- math_op: '*'
-                     +- id: 'n'
-                     +- function call: 'factorial()'
-                        +- math_op: '-'
-                           +- id: 'n'
-                           +- int const: '1'
-   +- function def: 'main'
-      +- id: 'u32'
-      +- statement block: '{}'
-         +- if statement:
-            +- boolean_op: '&&'
-               +- boolean_op: '||'
-                  +- compare_op: '=='
-                     +- id: 'a'
-                     +- int const: '100'
-                  +- compare_op: '=='
-                     +- id: 'b'
-                     +- int const: '200'
-               +- compare_op: '<'
-                  +- id: 'c'
-                  +- int const: '10'
-            +- statement block: '{}'
-               +- assign statement: '='
-                  +- id: 'a'
-                  +- int const: '10'
-            +- statement block: '{}'
-               +- assign statement: '='
-                  +- id: 'b'
-                  +- int const: '100'
-         +- function call: 'add()'
-            +- id: 'a'
-            +- int const: '100'
-            +- id: 'b'
    +- struct def: 'vector2'
-      +- field: id: 'x', type: 'u32'
-      +- field: id: 'y', type: 'u32'
-ast list memory usage: 2880 bytes
+      +- field: 
+         +- id: 'x'
+         +- type: id: 'int', is_array: false, dim: 0
+      +- field: 
+         +- id: 'y'
+         +- type: id: 'int', is_array: false, dim: 0
+   +- struct def: 'String'
+      +- field: 
+         +- id: 'data'
+         +- type: id: 'char', is_array: true, dim: 1000
+      +- field: 
+         +- id: 'length'
+         +- type: id: 'int', is_array: false, dim: 0
+   +- function def: 'vector2_add'
+      +- param: 
+         +- id: 'a'
+         +- type: id: 'vector2', is_array: false, dim: 0
+      +- param: 
+         +- id: 'b'
+         +- type: id: 'vector2', is_array: false, dim: 0
+      +- statement block: '{}'
+         +- assignment statement: '='
+            +- var decl : 
+               +- id: 'result'
+               +- type: id: 'vector2', is_array: false, dim: 0
+            +- integer const: '0'
+         +- assignment statement: '='
+            +- l value:
+               +- id: 'result'
+               +- id: 'x'
+            +- math_op: '+'
+               +- l value:
+                  +- id: 'a'
+                  +- id: 'x'
+               +- l value:
+                  +- id: 'b'
+                  +- id: 'x'
+         +- assignment statement: '='
+            +- l value:
+               +- id: 'result'
+               +- id: 'y'
+            +- math_op: '+'
+               +- l value:
+                  +- id: 'a'
+                  +- id: 'y'
+               +- l value:
+                  +- id: 'b'
+                  +- id: 'y'
+         +- return statement:
+            +- l value:
+               +- id: 'result'
+   +- function def: 'simple'
+      +- statement block: '{empty}'
+   +- function def: 'start'
+      +- param: 
+         +- id: 'arg'
+         +- type: id: 'int', is_array: true, dim: 30
+      +- param: 
+         +- id: 'a'
+         +- type: id: 'int', is_array: false, dim: 0
+      +- statement block: '{}'
+         +- assignment statement: '='
+            +- var decl : 
+               +- id: 'x'
+               +- type: id: 'int', is_array: true, dim: 5
+            +- integer const: '0'
+         +- assignment statement: '='
+            +- l value:
+               +- array access:
+                  +- id: 'x'
+                  +- integer const: '0'
+            +- integer const: '10'
+         +- assignment statement: '='
+            +- l value:
+               +- array access:
+                  +- id: 'x'
+                  +- integer const: '1'
+            +- integer const: '20'
+         +- assignment statement: '='
+            +- var decl : 
+               +- id: 'y'
+               +- type: id: 'int', is_array: false, dim: 0
+            +- integer const: '20'
+         +- assignment statement: '='
+            +- var decl : 
+               +- id: 'msg'
+               +- type: id: 'string', is_array: false, dim: 0
+            +- string const: 'Hey, Sailor!'
+         +- if statement:
+            +- l value:
+               +- id: 'a'
+            +- statement block: '{}'
+               +- function call: 'print()'
+                  +- l value:
+                     +- id: 'a'
+            +- if statement:
+               +- l value:
+                  +- id: 'b'
+               +- statement block: '{}'
+                  +- function call: 'print()'
+                     +- l value:
+                        +- id: 'b'
+               +- statement block: '{}'
+                  +- function call: 'print()'
+                     +- integer const: '10'
+         +- assignment statement: '='
+            +- var decl : 
+               +- id: 'n'
+               +- type: id: 'int', is_array: false, dim: 0
+            +- integer const: '0'
+         +- while statement:
+            +- compare_op: '<'
+               +- l value:
+                  +- id: 'n'
+               +- integer const: '10'
+            +- statement block: '{}'
+               +- assignment statement: '='
+                  +- l value:
+                     +- array access:
+                        +- id: 'x'
+                        +- l value:
+                           +- id: 'n'
+                  +- math_op: '*'
+                     +- l value:
+                        +- id: 'n'
+                     +- integer const: '2'
+               +- assignment statement: '='
+                  +- l value:
+                     +- id: 'n'
+                  +- math_op: '+'
+                     +- l value:
+                        +- id: 'n'
+                     +- integer const: '1'
+         +- assignment statement: '='
+            +- var decl : 
+               +- id: 's'
+               +- type: id: 'String', is_array: false, dim: 0
+            +- integer const: '0'
+         +- assignment statement: '='
+            +- var decl : 
+               +- id: 'n'
+               +- type: id: 'int', is_array: false, dim: 0
+            +- integer const: '0'
+         +- while statement:
+            +- compare_op: '<'
+               +- l value:
+                  +- id: 'n'
+               +- l value:
+                  +- id: 's'
+                  +- id: 'length'
+            +- statement block: '{}'
+               +- function call: 'print()'
+                  +- l value:
+                     +- id: 's'
+                     +- array access:
+                        +- id: 'data'
+                        +- l value:
+                           +- id: 'n'
+               +- assignment statement: '='
+                  +- l value:
+                     +- id: 'n'
+                  +- math_op: '+'
+                     +- l value:
+                        +- id: 'n'
+                     +- integer const: '1'

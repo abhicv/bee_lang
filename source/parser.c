@@ -208,27 +208,6 @@ Index ParseAtom(AST *ast, Parser *parser)
     exit(1);
 }
 
-// Index ParseSructFieldAccess(AST *ast, Parser *parser)
-// {
-//     Node node = {0};
-//     node.type = NODE_FIELD_ACCESS;
-
-//     while(true)
-//     {
-//         Token id = ExpectToken(parser, TOKEN_IDENTIFIER);
-//         Node idNode = {0};
-//         idNode.type = NODE_IDENTIFIER;
-//         idNode.identifier.value = id.identifier;
-//         PushIndex(&node.fieldAccess.ids, &node.fieldAccess.idCount, PushNode(ast, idNode));
-
-//         Token next = PeekNextToken(parser);
-//         if(next.type == TOKEN_DOT) GetNextToken(parser);
-//         else break;
-//     }
-
-//     return PushNode(ast, node);
-// }
-
 Index ParseArrayAccess(AST *ast, Parser *parser) 
 {
     Token id = ExpectToken(parser, TOKEN_IDENTIFIER);
@@ -454,7 +433,7 @@ Index ParseStatement(AST *ast, Parser *parser)
 
         bool equalTokenFound = false;
 
-        // peeking forward to see if the statement contins TOKEN_EQUAL
+        // peeking forward to see if the statement contains TOKEN_EQUAL
         while(true) 
         {
             Token token = GetNextToken(parser);
@@ -526,20 +505,22 @@ Index ParseFunction(AST *ast, Parser *parser)
     ExpectToken(parser, TOKEN_KEYWORD_FN);
     
     Token funcId = ExpectToken(parser, TOKEN_IDENTIFIER);
-    
-    ExpectToken(parser, TOKEN_LEFT_PAREN);
-    
+        
     Node node = {0};
     node.type = NODE_FUNC_DEF;
     node.functionDef.name = funcId.identifier;
     node.functionDef.parameters = 0;
     node.functionDef.parameterCount = 0;
-    node.functionDef.returnType = -1;
+    node.functionDef.returnType = 0;
+    node.functionDef.isReturnTypeDeclared = false;
     
-    //parse parameters
+    ExpectToken(parser, TOKEN_LEFT_PAREN);
+
+    // parameters
     while(true)
     {
         Token token = PeekNextToken(parser);
+
         if(token.type == TOKEN_PROGRAM_END) break;
         else if(token.type == TOKEN_RIGHT_PAREN) break;
         
@@ -566,13 +547,14 @@ Index ParseFunction(AST *ast, Parser *parser)
     
     ExpectToken(parser, TOKEN_RIGHT_PAREN);
     
-    //parse return types
+    // return type
     if(AcceptToken(parser, TOKEN_COLON))
     {
         node.functionDef.returnType = ParseType(ast, parser);
+        node.functionDef.isReturnTypeDeclared = false;
     }
     
-    // function body    
+    // body    
     node.functionDef.body = ParseStatementList(ast, parser);
     
     return PushNode(ast, node);

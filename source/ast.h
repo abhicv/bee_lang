@@ -75,6 +75,7 @@ typedef struct {
             Index *parameters;
             unsigned int parameterCount;
             Index returnType;
+            bool isReturnTypeDeclared;
             Index body;
         } functionDef;
 
