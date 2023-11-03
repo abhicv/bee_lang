@@ -10,8 +10,8 @@
 #include "ast.h"
 
 typedef struct {
-    const char *fileName;
-    const char *source;   
+    const char *fileName;    
+    LoadedFile loadedFile;
     TokenList tokenList;
     unsigned int tokenIndex;
 } Parser;

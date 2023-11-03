@@ -1,2 +1,7 @@
+# Populate the global type table withuser defined type (structs)
+# Also need a global function table
+# Walk the ast and do type checking and annotate the nodes with type info
 
-
+# allow type annotation of array type as := let x: [int], fn draw(buffer: [Pixel]) - DONE
+# struct initialization
+# array initialization

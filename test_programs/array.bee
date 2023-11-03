@@ -1,0 +1,14 @@
+struct Pixel {
+    r: int;
+    g: int;
+    b: int;
+}
+
+struct DrawCommand {
+    command: [int];
+}
+
+fn draw_to_screen(buffer: [Pixel]) {
+    let mask: [int];
+}
+

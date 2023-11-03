@@ -4,7 +4,7 @@ struct vector2 {
 }
 
 struct String {
-    data : char [1000];
+    data : [char];
     length: int;
 }
 
@@ -15,35 +15,27 @@ fn vector2_add(a: vector2, b: vector2) : vector2 {
     return result;
 }
 
-fn simple() {}
+fn scale_vector(v: vector2) {
 
-fn start (arg: int [30], a : int) : int {
-    let x : int [5] = 0;
-    x[0] = 10;
-    x[1] = 20;
+}
 
-    let y : int = 20;
-    let msg : string = "Hey, Sailor!";
-    
-    if (a) {
-        print(a);
-    } else if (b) {
-        print(b);
-    } else {
-        print(10);
+fn main (arg_count: int, args: [String]) : int {
+    let msg: String = "dsdadas";
+    msg.data[10];
+
+    let m: String = {
+        data = "fsdfsdfd",
+        length = 10
+    };
+
+    scale_vector(vector2 {x = 10, y = 90});
+
+    if is_playable {
+
     }
 
-    let n : int = 0;
-    while (n < 10) {
-        x[n] = n * 2;
-        n = n + 1;
-    }
-
-    let s: String = 0;
-    
-    let n : int = 0;
-    while (n < s.length) {
-        print(s.data[n]);
-        n = n + 1;
+    let game_over: bool = false; 
+    while !game_over {
+        update_and_render_frame();
     }
 }

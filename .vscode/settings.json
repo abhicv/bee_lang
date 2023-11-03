@@ -3,6 +3,8 @@
         "symbol.h": "c",
         "parser.h": "c",
         "string.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "ast.h": "c",
+        "lexer.h": "c"
     }
 }

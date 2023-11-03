@@ -19,7 +19,7 @@ struct_fields:
 
 type_annotation: 
         | identifier
-        | identifier '[' number_literal ']'
+        | '[' identifier ']' // array type
         
 parameters: 
         | identifier ':' type_annotation ',' parameters
@@ -58,21 +58,35 @@ var_decl_stmt:
         | 'let' identifier : type_annotation '=' expr ';'
 
 while_statement: 
-        | 'while' '(' expr ')' '{' statement_list '}'
+        | 'while' expr '{' statement_list '}'
 
 if_statement: 
-        | 'if' '(' expr ')' '{' statement_list '}'
-        | 'if' '(' expr ')' '{' statement_list '} else '{' statement_list '}'
-        | 'if' '(' expr ')' '{' statement_list '} else if_statement
+        | 'if' expr '{' statement_list '}'
+        | 'if' expr '{' statement_list '} else '{' statement_list '}'
+        | 'if' expr '{' statement_list '} else if_statement
 
 return_statement: 'return' expr ';'
 
 function_call: 
-        | identifier '(' arg_list ')
+        | identifier '(' argument_list ')
 
-arg_list:
-        | expr ',' arg_list
+argument_list:
+        | expr ',' argument_list
         | expr
+
+struct_field_initialization:
+        | identifier '=' expr ',' struct_field_initialization
+        | identifier '=' expr
+
+struct_initialization:
+        | identifier '{' struct_field_initialize  '}' ';'
+
+expr_list:
+        | expr ',' expr_list
+        | expr
+
+array_initialization:
+        | '[' expr_list ']'
 
 expr : 
         | expr '+' expr
@@ -92,3 +106,7 @@ expr :
         | function_call        
         | integer_constant
         | string_constant
+        | 'true'
+        | 'false'
+        | struct_initialization
+        | array_initialization

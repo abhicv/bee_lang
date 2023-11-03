@@ -1,10 +1,20 @@
-struct vector2 {
-    x : u32;
-    y : u32;
+struct C {
+    x : int;
 }
 
-struct Node {
-    left: Node;
-    right: Node;
-    data: u32;
+struct B {
+    x : int;
+    c : C [10];
 }
+
+struct A {
+    x : int;
+    b : B [10];
+}
+
+fn compute_sum(x: int, a: A): { x = 10; a.x = 10;
+    a.b[x].x = 0;
+    a.b[0].c[0].x = 10;
+}
+
+

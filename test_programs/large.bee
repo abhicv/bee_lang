@@ -105,7 +105,7 @@ Index ParseExpression(AST *ast, Parser *parser, int minPrec)
 Index ParseFunctionCall(AST *ast, Parser *parser) 
 {
     Node node = {0};
-    node.type = NODE_FUNC_CALL;
+    node.type = NODE_FUNCTION_CALL;
     node.functionCall.id = parser->tokenList.tokens[parser->tokenIndex - 2].identifier;
 
     // function arguments
@@ -282,7 +282,7 @@ Index ParseVarDeclStatement(AST *ast, Parser *parser)
     Index typeAnnoIndex = ParseType(ast, parser);
 
     Node node = {0};
-    node.type = NODE_VAR_DECL;
+    node.type = NODE_VARIABLE_DECLARATION;
     node.varDecl.id = PushNode(ast, idNode);
     node.varDecl.type = typeAnnoIndex;
     
@@ -458,7 +458,7 @@ Index ParseFunction(AST *ast, Parser *parser)
     ExpectToken(parser, TOKEN_LEFT_PAREN);
 
     Node node = {0};
-    node.type = NODE_FUNC_DEF;
+    node.type = NODE_FUNCTION_DEFINITION;
     node.functionDef.name = funcId.identifier;
     node.functionDef.parameters = 0;
     node.functionDef.parameterCount = 0;
@@ -514,7 +514,7 @@ Index ParseStruct(AST *ast, Parser *parser)
     ExpectToken(parser, TOKEN_LEFT_BRACE);
 
     Node node = {0};
-    node.type = NODE_STRUCT_DEF;
+    node.type = NODE_STRUCT_DEFINITION;
     node.structDef.name = structId.identifier;
     node.structDef.fields = 0;
     node.structDef.fieldCount = 0;

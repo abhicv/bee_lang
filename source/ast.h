@@ -6,12 +6,14 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "parser.h"
+
 enum NodeType
 {
     NODE_PROGRAM = 1,
-    NODE_FUNC_DEF,
-    NODE_STRUCT_DEF,
-    NODE_VAR_DECL,
+    NODE_FUNCTION_DEFINITION,
+    NODE_STRUCT_DEFINITION,
+    NODE_VARIABLE_DECLARATION,
     NODE_FIELD,
     NODE_PARAM,
     NODE_L_VALUE,
@@ -22,11 +24,16 @@ enum NodeType
     NODE_IF_STATEMENT,
     NODE_WHILE_STATEMENT,
     NODE_RETURN_STATEMENT,
-    NODE_FUNC_CALL,
+    NODE_FUNCTION_CALL,
     NODE_IDENTIFIER,
     NODE_INTEGER_CONSTANT,
     NODE_STRING_CONSTANT,
+    NODE_BOOLEAN_CONSTANT,
     NODE_TYPE_ANNOTATION,
+
+    NODE_STRUCT_INITIALIZATION,
+    NODE_STRUCT_FIELD_INITIALIZATION,
+    NODE_ARRAY_INTITIALIZATION
 };
 
 enum OperatorType
@@ -53,6 +60,7 @@ typedef int Index;
 
 typedef struct {
     unsigned int type;
+    unsigned int typeTableIndex;
     
     union
     {
@@ -141,7 +149,7 @@ typedef struct {
         struct 
         {
             Index *simpleLValues;
-            unsigned int simpleLValueCount;            
+            unsigned int simpleLValueCount;
         } lValue;
 
         struct 
@@ -157,6 +165,11 @@ typedef struct {
 
         struct
         {
+            bool isTrue;
+        } boolean;
+
+        struct
+        {
             const char* value;
         } string, identifier;
     };
@@ -165,6 +178,7 @@ typedef struct {
 typedef struct {
     Node *nodeList;
     unsigned int nodeCount;
+    Parser parser;
 } AST;
 
 void InitAST(AST *ast);

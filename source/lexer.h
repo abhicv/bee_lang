@@ -46,6 +46,8 @@ enum TokenType
     TOKEN_KEYWORD_WHILE,
     TOKEN_KEYWORD_LET,
     TOKEN_KEYWORD_RETURN,
+    TOKEN_KEYWORD_TRUE,
+    TOKEN_KEYWORD_FALSE,
 
     TOKEN_LEFT_PAREN, // '('
     TOKEN_RIGHT_PAREN, // ')'
@@ -63,6 +65,12 @@ enum TokenType
     TOKEN_TYPE_COUNT,
 };
 
+typedef struct LoadedFile {
+    char *data;
+    unsigned int size;
+    bool isLoaded;
+} LoadedFile;
+
 typedef struct {
     char *keywordString;
     unsigned int len;
@@ -78,11 +86,14 @@ typedef struct {
     char *stringValue;
     unsigned int opType;
 
-    // pos data
+    // number of characters
     unsigned int size;
+
+    // positional data
+    unsigned int pos;
+
     unsigned int column;
     unsigned int line;
-    
 } Token;
 
 typedef struct {
@@ -91,10 +102,12 @@ typedef struct {
 } TokenList;
 
 typedef struct {
-    const char *source;
+    char *source;
     unsigned int pos;
     unsigned int line;
     unsigned int column;
 } Lexer;
+
+void PrintErrorLocationInSource(char *source, unsigned int location, unsigned int lineNumber, unsigned int column, char *errorMsg);
 
 #endif

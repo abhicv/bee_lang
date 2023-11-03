@@ -9,6 +9,8 @@ Keyword keywordList[] = {
     {.keywordString = "while", .len = 5, .tokenType = TOKEN_KEYWORD_WHILE},
     {.keywordString = "return", .len = 6, .tokenType = TOKEN_KEYWORD_RETURN},
     {.keywordString = "let", .len = 3, .tokenType = TOKEN_KEYWORD_LET},
+    {.keywordString = "true", .len = 4, .tokenType = TOKEN_KEYWORD_TRUE},
+    {.keywordString = "false", .len = 5, .tokenType = TOKEN_KEYWORD_FALSE},
 };
 
 char GetNextCharacter(Lexer *lexer)
@@ -21,21 +23,22 @@ char PeekNextCharacter(Lexer *lexer)
     return lexer->source[lexer->pos];
 }
 
-char *LoadFileNullTerminated(const char *fileName)
+LoadedFile LoadFileNullTerminated(const char *fileName)
 {
-    char *data = 0;
-    
+    LoadedFile loadedFile = {0};
+    loadedFile.isLoaded = false;
+
     FILE *input = fopen(fileName, "r");
     if(input)
     {
         fseek(input, 0, SEEK_END);
         unsigned int size = ftell(input);
         fseek(input, 0, SEEK_SET);
-        
-        data = (char*)malloc(size + 1);
-        fread(data, 1, size, input);
-        data[size] = 0;
-        
+        loadedFile.data = (char*)malloc(size + 1);
+        fread(loadedFile.data, sizeof(char), size, input);
+        loadedFile.data[size] = 0;
+        loadedFile.size = size;
+        loadedFile.isLoaded = true;
         fclose(input);
     }
     else
@@ -43,7 +46,7 @@ char *LoadFileNullTerminated(const char *fileName)
         printf("error: failed to open input file '%s'\n", fileName);
     }
     
-    return data;
+    return loadedFile;
 }
 
 bool IsNumeralCharacter(char c)
@@ -76,6 +79,48 @@ bool IsWhiteSpaceCharacter(char c)
     return (c == '\n') || (c == '\r') || (c == '\t') || (c == ' ');
 }
 
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
+void PrintErrorLocationInSource(char *source, unsigned int location, unsigned int lineNumber, unsigned int column, char *errorMsg)
+{
+    printf("%u:%u "  ANSI_COLOR_RED "error:" ANSI_COLOR_RESET "%s\n", lineNumber, column, errorMsg);
+
+    int size = strlen(source);
+    if (location >= size) return;
+
+    int leftPos = location;
+    int rightPos = location;
+
+    while(source[leftPos] != '\n' && leftPos >= 0) leftPos--;
+    while(source[rightPos] != '\n' && rightPos < size) rightPos++;
+
+    leftPos++;
+    rightPos--;
+
+    // printf("location: %d, left: %d, right: %d\n", location, leftPos, rightPos);
+    // printf("location: %d, left: %d, right: %d\n", source[location], source[leftPos], source[rightPos]);
+
+    int lineSize = rightPos - leftPos + 1;
+    char *line = (char*)malloc(lineSize);
+    strncpy(line, source + leftPos, lineSize);
+
+    printf("\t | %s\n", line);
+    printf("\t | ");
+    for(int n = 0; n < location - leftPos; n++) printf(" ");
+    printf(ANSI_COLOR_RED);
+    printf("^");
+    for(int n = 0; n < rightPos - location; n++) printf("-");
+    printf(ANSI_COLOR_RESET);
+    printf("\n");
+    free(line);
+}
+
 Token TokenizeIntegerConstant(Lexer *lexer)
 {
     unsigned int start = lexer->pos;
@@ -98,7 +143,7 @@ Token TokenizeIntegerConstant(Lexer *lexer)
     char character = PeekNextCharacter(lexer);
     if(IsIdentifierCharacter(character))
     {
-        printf("error:%u:%u an identifier name cannot start with a number\n", lexer->line+1, lexer->column+1);
+        PrintErrorLocationInSource(lexer->source, lexer->pos, lexer->line+1, lexer->column+1, "invalid suffix for integer constant");
         exit(1);
     }
     
@@ -136,7 +181,7 @@ Token TokenizeStringLiteral(Lexer *lexer)
         }
         else if(character == 0)
         {
-            printf("error:%u:%u string literal closing quote missing\n", lexer->line+1, lexer->column+1);
+            PrintErrorLocationInSource(lexer->source, start, lexer->line+1, lexer->column+1, "string literal missing terminating character '\"'");
             exit(1);
         }
     }
@@ -145,10 +190,10 @@ Token TokenizeStringLiteral(Lexer *lexer)
 
     if(len == 0)
     {
-        printf("error:%u:%u a string literal cannot be empty\n", lexer->line+1, lexer->column+1);
+        PrintErrorLocationInSource(lexer->source, start, lexer->line+1, lexer->column+1, "string literal cannot be empty");
         exit(1);
     }
-        
+
     Token token = {0};
     token.type = TOKEN_STRING_CONSTANT;
     token.size = len;
@@ -252,7 +297,7 @@ void PushToken(TokenList *tokenList, Token token)
     tokenList->tokens[tokenList->count - 1] = token;
 }
 
-TokenList TokenizeSource(const char *source)
+TokenList TokenizeSource(char *source)
 {
     TokenList tokenList = {0};
     
@@ -267,6 +312,7 @@ TokenList TokenizeSource(const char *source)
         {
             Token token = TokenizeIntegerConstant(&lexer);
             lexer.column += token.size;
+            token.pos = lexer.pos;
             PushToken(&tokenList, token);
         }
         else if(IsIdentifierCharacter(character))
@@ -279,6 +325,7 @@ TokenList TokenizeSource(const char *source)
             }
 
             lexer.column += token.size;
+            token.pos = lexer.pos;
             PushToken(&tokenList, token);
         }
         else if(character == '+')
@@ -293,6 +340,7 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
             
             PushToken(&tokenList, token);
         }
@@ -308,6 +356,7 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
             
             PushToken(&tokenList, token);
         }
@@ -322,6 +371,7 @@ TokenList TokenizeSource(const char *source)
             token.column = lexer.column;
             token.size = 1;
             lexer.column += token.size;
+            token.pos = lexer.pos;
 
             PushToken(&tokenList, token);
         }
@@ -349,6 +399,7 @@ TokenList TokenizeSource(const char *source)
                 token.column = lexer.column;
                 token.size = 1;
                 lexer.column += token.size;    
+                token.pos = lexer.pos;
                 PushToken(&tokenList, token);
             }
         }
@@ -364,6 +415,7 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
 
             lexer.column += token.size;
+            token.pos = lexer.pos;
             
             PushToken(&tokenList, token);
         }
@@ -371,6 +423,7 @@ TokenList TokenizeSource(const char *source)
         {
             Token token = TokenizeStringLiteral(&lexer);
             lexer.column += token.size + 2;
+            token.pos = lexer.pos;
             PushToken(&tokenList, token);
         }
         else if(character == '=')
@@ -398,6 +451,7 @@ TokenList TokenizeSource(const char *source)
             }
 
             lexer.column += token.size;
+            token.pos = lexer.pos;
             PushToken(&tokenList, token);
         }
         else if(character == '<')
@@ -426,6 +480,8 @@ TokenList TokenizeSource(const char *source)
             }
 
             lexer.column += token.size;
+            token.pos = lexer.pos;
+
             PushToken(&tokenList, token);
         }
         else if(character == '>')
@@ -454,6 +510,8 @@ TokenList TokenizeSource(const char *source)
             }
 
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == '!')
@@ -482,6 +540,8 @@ TokenList TokenizeSource(const char *source)
             }
 
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == '&')
@@ -491,7 +551,7 @@ TokenList TokenizeSource(const char *source)
             
             if(c != '&')
             {
-                printf("%u:%u: error: found '&' expected '&&'\n",  lexer.line + 1, lexer.column + 1);
+                PrintErrorLocationInSource(lexer.source, lexer.pos - 1, lexer.line + 1, lexer.column + 1, "found '&' expected '&&'");
                 exit(1);
             }
 
@@ -505,6 +565,8 @@ TokenList TokenizeSource(const char *source)
             token.size = 2;
          
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == '|')
@@ -514,7 +576,7 @@ TokenList TokenizeSource(const char *source)
 
             if(c != '|')
             {
-                printf("%u:%u: error: found '|' expected '||'\n",  lexer.line + 1, lexer.column + 1);
+                PrintErrorLocationInSource(lexer.source, lexer.pos - 1, lexer.line + 1, lexer.column + 1, "found '|' expected '||'");
                 exit(1);
             }
 
@@ -528,6 +590,8 @@ TokenList TokenizeSource(const char *source)
             token.size = 2;
          
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == '(')
@@ -541,6 +605,8 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == ')')
@@ -554,6 +620,8 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == '{')
@@ -567,6 +635,8 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == '}')
@@ -580,6 +650,8 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == '[')
@@ -593,6 +665,8 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == ']')
@@ -606,6 +680,8 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == ';')
@@ -619,6 +695,8 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == ',')
@@ -632,6 +710,8 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
+            
             PushToken(&tokenList, token);
         }
         else if(character == ':')
@@ -645,6 +725,7 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
             PushToken(&tokenList, token);
         }
         else if(character == '.')
@@ -658,6 +739,7 @@ TokenList TokenizeSource(const char *source)
             token.size = 1;
             
             lexer.column += token.size;
+            token.pos = lexer.pos;
             PushToken(&tokenList, token);
         }
         else if(character == 0)
@@ -666,6 +748,7 @@ TokenList TokenizeSource(const char *source)
             token.type = TOKEN_PROGRAM_END;
             token.column = lexer.column;
             token.line = lexer.line;
+            token.pos = lexer.pos;
             PushToken(&tokenList, token);
             break;
         }
@@ -719,6 +802,8 @@ char *TokenTypeToString(unsigned int type)
         case TOKEN_KEYWORD_WHILE:           return "token_keyword_while"; break;
         case TOKEN_KEYWORD_RETURN:          return "token_keyword_return"; break;
         case TOKEN_KEYWORD_LET:             return "token_keyword_let"; break;
+        case TOKEN_KEYWORD_TRUE:            return "token_keyword_true"; break;
+        case TOKEN_KEYWORD_FALSE:           return "token_keyword_false"; break;
         case TOKEN_LEFT_PAREN:              return "token_left_paren"; break;
         case TOKEN_RIGHT_PAREN:             return "token_right_paren"; break;
         case TOKEN_LEFT_BRACE:              return "token_left_brace"; break;
@@ -737,5 +822,5 @@ char *TokenTypeToString(unsigned int type)
 
 void PrintTokenInfo(Token token)
 {
-    printf("%u:%u: type: '%s', size: %u\n", token.line+1, token.column+1, TokenTypeToString(token.type), token.size);
+    printf("%u:%u:%u type: '%s', size: %u\n", token.line+1, token.column+1, token.pos, TokenTypeToString(token.type), token.size);
 }

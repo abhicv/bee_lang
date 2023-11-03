@@ -26,15 +26,23 @@ bool AcceptToken(Parser *parser, unsigned int tokenType)
 Token ExpectToken(Parser *parser, unsigned int tokenType)
 {
     Token token = PeekNextToken(parser);
-    
+
     if(token.type == tokenType)
     {
         return GetNextToken(parser);
     }
     else
     {
-        printf("%s:%u:%u: error: expected '%s' but found '%s'\n", parser->fileName, token.line+1, token.column+1, TokenTypeToString(tokenType), TokenTypeToString(token.type));
-        exit(1);
+        char errorMsg[500] = {0};
+        sprintf(errorMsg, "expected '%s' but found '%s'", TokenTypeToString(tokenType), TokenTypeToString(token.type));
+        PrintErrorLocationInSource(parser->loadedFile.data, token.pos - token.size, token.line + 1, token.column + 1, errorMsg);
+
+        Token dummy = {0};
+        token.type = tokenType;
+        token.identifier = "this_is_a_dummy";
+        return token;
+
+        // exit(1);
     }
 }
 
@@ -43,11 +51,10 @@ enum OperatorAssociativity {
     RIGHT_ASSOCIATIVE,
 };
 
-typedef struct OpInfo OpInfo;
-struct OpInfo {
+typedef struct OpInfo {
     unsigned int precedence;
     unsigned int associatvity;
-};
+} OpInfo;
 
 OpInfo opInfoTable[] = {
     [ARITHMETIC_OP_ADD] = {.precedence = 4, .associatvity = LEFT_ASSOCIATIVE},
@@ -135,7 +142,7 @@ Index ParseExpression(AST *ast, Parser *parser, int minPrec)
 Index ParseFunctionCall(AST *ast, Parser *parser) 
 {
     Node node = {0};
-    node.type = NODE_FUNC_CALL;
+    node.type = NODE_FUNCTION_CALL;
     node.functionCall.id = parser->tokenList.tokens[parser->tokenIndex - 2].identifier;
     
     // function arguments
@@ -195,6 +202,20 @@ Index ParseAtom(AST *ast, Parser *parser)
         node.string.value = parser->tokenList.tokens[parser->tokenIndex - 1].stringValue;
         return PushNode(ast, node);
     }
+    else if(AcceptToken(parser, TOKEN_KEYWORD_TRUE))
+    {
+        Node node = {0};
+        node.type = NODE_BOOLEAN_CONSTANT;
+        node.boolean.isTrue = true;
+        return PushNode(ast, node);
+    }
+    else if(AcceptToken(parser, TOKEN_KEYWORD_FALSE))
+    {
+        Node node = {0};
+        node.type = NODE_BOOLEAN_CONSTANT;
+        node.boolean.isTrue = false;
+        return PushNode(ast, node);
+    }
     else if(AcceptToken(parser, TOKEN_LEFT_PAREN))
     {
         Index index = ParseExpression(ast, parser, 1);
@@ -204,7 +225,10 @@ Index ParseAtom(AST *ast, Parser *parser)
     
     // an atom is always required
     Token next = PeekNextToken(parser);
-    printf("%s:%u:%u: error: expecting an expression before '%s'\n", parser->fileName, next.line+1, next.column+1, TokenTypeToString(next.type));
+
+    char errorMsg[500] = {0};
+    sprintf(errorMsg, "expecting an expression before '%s'\n", TokenTypeToString(next.type));
+    PrintErrorLocationInSource(parser->loadedFile.data, next.pos, next.line + 1, next.column + 1, errorMsg);
     exit(1);
 }
 
@@ -282,22 +306,34 @@ Index ParseAssignmentStatement(AST *ast, Parser *parser)
     return PushNode(ast, node);
 }
 
-Index ParseType(AST *ast, Parser *parser) {
+Index ParseType(AST *ast, Parser *parser) 
+{
     Node node = {0};
     node.type = NODE_TYPE_ANNOTATION;
     node.typeAnnotation.isArrayType = false;
-    
-    Token typeId = ExpectToken(parser, TOKEN_IDENTIFIER);
-    node.typeAnnotation.id = typeId.identifier;
-    
+
     Token next = PeekNextToken(parser);
-    
-    if(next.type == TOKEN_LEFT_BRACKET) {
+
+    if(next.type == TOKEN_IDENTIFIER) 
+    {
+        node.typeAnnotation.id = next.identifier;
         GetNextToken(parser);
-        Token arrayDimToken = ExpectToken(parser, TOKEN_INTEGER_CONSTANT);
+    }
+    else if(next.type == TOKEN_LEFT_BRACKET) 
+    {
+        GetNextToken(parser);
+        Token typeId = ExpectToken(parser, TOKEN_IDENTIFIER);
         ExpectToken(parser, TOKEN_RIGHT_BRACKET);
+        
+        node.typeAnnotation.id = typeId.identifier;
         node.typeAnnotation.isArrayType = true;
-        node.typeAnnotation.arrayDim = arrayDimToken.integerValue;
+        node.typeAnnotation.arrayDim = 0;
+    } 
+    else {
+        char errorMsg[500] = {0};
+        sprintf(errorMsg, "expected type, but found %s", TokenTypeToString(next.type));
+        PrintErrorLocationInSource(parser->loadedFile.data, next.pos, next.line + 1, next.column + 1, errorMsg);
+        exit(1);
     }
     
     return PushNode(ast, node);
@@ -318,7 +354,7 @@ Index ParseVarDeclStatement(AST *ast, Parser *parser)
     Index typeAnnoIndex = ParseType(ast, parser);
     
     Node node = {0};
-    node.type = NODE_VAR_DECL;
+    node.type = NODE_VARIABLE_DECLARATION;
     node.varDecl.id = PushNode(ast, idNode);
     node.varDecl.type = typeAnnoIndex;
     
@@ -339,9 +375,9 @@ Index ParseVarDeclStatement(AST *ast, Parser *parser)
         assignNode.assignStmt.expression = right;
         return PushNode(ast, assignNode);
         
-    } else {
-        ExpectToken(parser, TOKEN_SEMICOLON);
     }
+    
+    ExpectToken(parser, TOKEN_SEMICOLON);
     
     return PushNode(ast, node);
 }
@@ -349,11 +385,8 @@ Index ParseVarDeclStatement(AST *ast, Parser *parser)
 Index ParseIfStatement(AST *ast, Parser *parser)
 {
     ExpectToken(parser, TOKEN_KEYWORD_IF);
-    ExpectToken(parser, TOKEN_LEFT_PAREN);
     
     Index exprIndex = ParseExpression(ast, parser, 1);
-    
-    ExpectToken(parser, TOKEN_RIGHT_PAREN);
     
     Node node = {0};
     node.type = NODE_IF_STATEMENT;
@@ -383,14 +416,11 @@ Index ParseIfStatement(AST *ast, Parser *parser)
 Index ParseWhileStatement(AST *ast, Parser *parser)
 {
     ExpectToken(parser, TOKEN_KEYWORD_WHILE);
-    ExpectToken(parser, TOKEN_LEFT_PAREN);
     
     Node node = {0};
     node.type = NODE_WHILE_STATEMENT;
     node.whileStmt.conditionExpr = ParseExpression(ast, parser, 1);
-    
-    ExpectToken(parser, TOKEN_RIGHT_PAREN);
-    
+        
     node.whileStmt.block = ParseStatementList(ast, parser);
     
     return PushNode(ast, node);
@@ -507,7 +537,7 @@ Index ParseFunction(AST *ast, Parser *parser)
     Token funcId = ExpectToken(parser, TOKEN_IDENTIFIER);
         
     Node node = {0};
-    node.type = NODE_FUNC_DEF;
+    node.type = NODE_FUNCTION_DEFINITION;
     node.functionDef.name = funcId.identifier;
     node.functionDef.parameters = 0;
     node.functionDef.parameterCount = 0;
@@ -568,7 +598,7 @@ Index ParseStruct(AST *ast, Parser *parser)
     ExpectToken(parser, TOKEN_LEFT_BRACE);
     
     Node node = {0};
-    node.type = NODE_STRUCT_DEF;
+    node.type = NODE_STRUCT_DEFINITION;
     node.structDef.name = structId.identifier;
     node.structDef.fields = 0;
     node.structDef.fieldCount = 0;

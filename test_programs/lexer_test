@@ -10,7 +10,7 @@ _identifier_123_
 
 && || !
 
-fn struct if else while return let
+fn struct if else while return let true false
 
 ( ) { } [ ] : ; , .
 

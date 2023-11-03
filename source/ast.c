@@ -62,7 +62,7 @@ void PrintNode(AST ast, Index index, int indent)
         };
         break;
         
-        case NODE_STRUCT_DEF:
+        case NODE_STRUCT_DEFINITION:
         {
             printf("struct def: '%s'\n", node.structDef.name);
             
@@ -73,7 +73,7 @@ void PrintNode(AST ast, Index index, int indent)
         };
         break;
         
-        case NODE_FUNC_DEF:
+        case NODE_FUNCTION_DEFINITION:
         {
             printf("function def: '%s'\n", node.functionDef.name);
             
@@ -91,7 +91,7 @@ void PrintNode(AST ast, Index index, int indent)
         }
         break;
 
-        case NODE_VAR_DECL:
+        case NODE_VARIABLE_DECLARATION:
         {
             printf("var decl : \n");
             PrintNode(ast, node.varDecl.id, indent);
@@ -139,7 +139,7 @@ void PrintNode(AST ast, Index index, int indent)
         }
         break;
 
-        case NODE_FUNC_CALL:
+        case NODE_FUNCTION_CALL:
         {
             printf("function call: '%s()'\n", node.functionCall.id);
 
@@ -280,6 +280,12 @@ void PrintNode(AST ast, Index index, int indent)
         case NODE_STRING_CONSTANT:
         {
             printf("string const: '%s'\n", node.string.value);
+        }
+        break;
+
+        case NODE_BOOLEAN_CONSTANT:
+        {
+            printf("boolean const: '%s'\n", node.boolean.isTrue ? "true" : "false");
         }
         break;
 
