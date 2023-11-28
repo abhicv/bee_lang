@@ -4,15 +4,17 @@ struct C {
 
 struct B {
     x : int;
-    c : C [10];
+    c : [] C;
 }
 
 struct A {
     x : int;
-    b : B [10];
+    b : [] B;
 }
 
-fn compute_sum(x: int, a: A): { x = 10; a.x = 10;
+fn compute_sum(x: int, a: A): int { 
+    x = 10; 
+    a.x = 10;
     a.b[x].x = 0;
     a.b[0].c[0].x = 10;
 }

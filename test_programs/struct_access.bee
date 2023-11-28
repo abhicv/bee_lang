@@ -4,7 +4,7 @@ struct vector2 {
 }
 
 struct String {
-    data : [char];
+    data : [] char;
     length: int;
 }
 
@@ -19,22 +19,17 @@ fn scale_vector(v: vector2) {
 
 }
 
-fn main (arg_count: int, args: [String]) : int {
+fn main (arg_count: int, args: [] String) : int {
     let msg: String = "dsdadas";
-    msg.data[10];
 
-    let m: String = {
-        data = "fsdfsdfd",
-        length = 10
-    };
-
-    scale_vector(vector2 {x = 10, y = 90});
+    msg.data[10] = 'A';
 
     if is_playable {
 
     }
 
-    let game_over: bool = false; 
+    let game_over: bool = false;
+    
     while !game_over {
         update_and_render_frame();
     }

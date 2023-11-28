@@ -28,6 +28,7 @@ enum NodeType
     NODE_IDENTIFIER,
     NODE_INTEGER_CONSTANT,
     NODE_STRING_CONSTANT,
+    NODE_CHARACTER_CONSTANT,
     NODE_BOOLEAN_CONSTANT,
     NODE_TYPE_ANNOTATION,
 
@@ -38,7 +39,8 @@ enum NodeType
 
 enum OperatorType
 {
-    ARITHMETIC_OP_ADD = 1,
+    NONE_OP = 0, // not an operator type
+    ARITHMETIC_OP_ADD,
     ARITHMETIC_OP_SUB,
     ARITHMETIC_OP_MUL,
     ARITHMETIC_OP_DIV,
@@ -144,6 +146,7 @@ typedef struct {
         {
             Index id;
             Index type;
+            bool isTypeAnnotated;
         } varDecl, param, field;
 
         struct 
@@ -162,6 +165,11 @@ typedef struct {
         {
             int value;
         } integer;
+
+        struct
+        {
+            char value;
+        } character;
 
         struct
         {

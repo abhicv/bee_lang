@@ -1,0 +1,20 @@
+fn main() : int {
+    let x : int = 20;
+    let y : int = 10;
+    let result: int = 0;
+    result = x + y;
+    result = x - y;
+    result = x * y;
+    result = x / y;
+    result = x % y;
+    result = x + y * 10;
+    result = (x + y) * 10;
+}
+
+//let callback: (int, int) : int
+
+fn parse_string_literal(lexer: Lexer) {
+    // let num = callback(10, 30);
+    let x: int = 10;
+    let x: char = 'A';
+}

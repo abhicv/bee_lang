@@ -11,6 +11,7 @@ enum TokenType
     // constants
     TOKEN_INTEGER_CONSTANT,
     TOKEN_STRING_CONSTANT,
+    TOKEN_CHAR_CONSTANT,
 
     // name of variable, user defined type, function
     TOKEN_IDENTIFIER,
@@ -30,7 +31,7 @@ enum TokenType
     TOKEN_LT_EQ,
     TOKEN_GT_EQ,
 
-    // boolean operators (and, or, not)
+    // boolean operators (&&, ||, !)
     TOKEN_AND,
     TOKEN_OR,
     TOKEN_NOT,
@@ -60,14 +61,17 @@ enum TokenType
     TOKEN_COMMA, // ','
     TOKEN_DOT, // '.'
 
-    TOKEN_PROGRAM_END,
-
-    TOKEN_TYPE_COUNT,
+    TOKEN_PROGRAM_END
 };
 
-typedef struct LoadedFile {
+typedef struct String {
     char *data;
-    unsigned int size;
+    unsigned int length;    
+} String;
+
+typedef struct LoadedFile {
+    String source;
+    String path;
     bool isLoaded;
 } LoadedFile;
 
@@ -79,19 +83,16 @@ typedef struct {
 
 typedef struct {
     unsigned int type;
-    
-    // token data
-    int integerValue;
-    char *identifier;
-    char *stringValue;
-    unsigned int opType;
 
-    // number of characters
+    union {
+        int integerValue;
+        char characterValue;
+        char *identifier;
+        char *stringValue;
+    };
+
     unsigned int size;
-
-    // positional data
     unsigned int pos;
-
     unsigned int column;
     unsigned int line;
 } Token;
@@ -106,8 +107,9 @@ typedef struct {
     unsigned int pos;
     unsigned int line;
     unsigned int column;
+    LoadedFile loadedFile;
 } Lexer;
 
-void PrintErrorLocationInSource(char *source, unsigned int location, unsigned int lineNumber, unsigned int column, char *errorMsg);
+void PrintErrorLocationInSource(LoadedFile loadedFile, unsigned int location, unsigned int lineNumber, unsigned int column, char *errorMsg);
 
 #endif

@@ -1,9 +1,0 @@
-size of ast node: 40 bytes
-token count: 268
-parsing completed, AST build complete
-AST memory usage: 7560 bytes
-struct: vector2
-struct: String
-function: vector2_add
-function: simple
-function: start

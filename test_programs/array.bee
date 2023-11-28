@@ -1,14 +1,17 @@
 struct Pixel {
-    r: int;
-    g: int;
-    b: int;
+    red: u32;
+    green: u32;
+    blue: u32;
 }
 
 struct DrawCommand {
-    command: [int];
+    command: [10] u32;
+    variable_commands: [] u32;
 }
 
-fn draw_to_screen(buffer: [Pixel]) {
-    let mask: [int];
+fn draw_to_screen(buffer: [] Pixel) : [] Pixel {
+    let mask: u32 = 0;
+    let pixel = buffer[x * y + 1];
+    let x = 10;
 }
 

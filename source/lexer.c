@@ -28,18 +28,31 @@ LoadedFile LoadFileNullTerminated(const char *fileName)
     LoadedFile loadedFile = {0};
     loadedFile.isLoaded = false;
 
-    FILE *input = fopen(fileName, "r");
-    if(input)
+    String path = {0};
+    path.length = strlen(fileName);
+    path.data = (char*)malloc(path.length + 1);
+    strncpy(path.data, fileName, path.length);
+    path.data[path.length] = 0;
+
+    loadedFile.path = path;
+
+    FILE *file = fopen(fileName, "r");
+    if(file)
     {
-        fseek(input, 0, SEEK_END);
-        unsigned int size = ftell(input);
-        fseek(input, 0, SEEK_SET);
-        loadedFile.data = (char*)malloc(size + 1);
-        fread(loadedFile.data, sizeof(char), size, input);
-        loadedFile.data[size] = 0;
-        loadedFile.size = size;
+        fseek(file, 0, SEEK_END);
+        unsigned int size = ftell(file);
+        fseek(file, 0, SEEK_SET);
+
+        String source = {0};
+        source.data = (char*)malloc(size + 1);
+        fread(source.data, sizeof(char), size, file);
+        source.data[size] = 0;
+        source.length = size;
+        
+        fclose(file);
+
+        loadedFile.source = source;
         loadedFile.isLoaded = true;
-        fclose(input);
     }
     else
     {
@@ -87,28 +100,31 @@ bool IsWhiteSpaceCharacter(char c)
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
-void PrintErrorLocationInSource(char *source, unsigned int location, unsigned int lineNumber, unsigned int column, char *errorMsg)
+void PrintErrorLocationInSource(LoadedFile loadedFile, unsigned int location, unsigned int lineNumber, unsigned int column, char *errorMsg)
 {
-    printf("%u:%u "  ANSI_COLOR_RED "error:" ANSI_COLOR_RESET "%s\n", lineNumber, column, errorMsg);
+    printf("%s:%u:%u: error: %s\n", loadedFile.path.data, lineNumber, column, errorMsg);
 
-    int size = strlen(source);
-    if (location >= size) return;
+    if (location >= loadedFile.source.length) return;
+
+    char *source = loadedFile.source.data;
 
     int leftPos = location;
     int rightPos = location;
 
     while(source[leftPos] != '\n' && leftPos >= 0) leftPos--;
-    while(source[rightPos] != '\n' && rightPos < size) rightPos++;
+    while(source[rightPos] != '\n' && rightPos < loadedFile.source.length) rightPos++;
 
     leftPos++;
     rightPos--;
 
     // printf("location: %d, left: %d, right: %d\n", location, leftPos, rightPos);
-    // printf("location: %d, left: %d, right: %d\n", source[location], source[leftPos], source[rightPos]);
+    // printf("location: '%c'(%d), left: '%c'(%d), right: '%c'(%d)\n", source[location], source[location], source[leftPos], source[leftPos], source[rightPos], source[rightPos]);
+    // printf("line size: %u\n", rightPos - leftPos + 1);
 
     int lineSize = rightPos - leftPos + 1;
-    char *line = (char*)malloc(lineSize);
+    char *line = (char*)malloc(lineSize + 1);
     strncpy(line, source + leftPos, lineSize);
+    line[lineSize] = 0;
 
     printf("\t | %s\n", line);
     printf("\t | ");
@@ -143,7 +159,7 @@ Token TokenizeIntegerConstant(Lexer *lexer)
     char character = PeekNextCharacter(lexer);
     if(IsIdentifierCharacter(character))
     {
-        PrintErrorLocationInSource(lexer->source, lexer->pos, lexer->line+1, lexer->column+1, "invalid suffix for integer constant");
+        PrintErrorLocationInSource(lexer->loadedFile, lexer->pos, lexer->line+1, lexer->column+1, "invalid suffix for integer constant");
         exit(1);
     }
     
@@ -155,7 +171,53 @@ Token TokenizeIntegerConstant(Lexer *lexer)
     token.size = end - start;
     token.column = lexer->column;
     token.line = lexer->line;
-    
+    token.pos = start;    
+
+    return token;
+}
+
+Token TokenizeCharacterConstant(Lexer *lexer)
+{
+    GetNextCharacter(lexer);
+
+    unsigned int len = 0;
+    unsigned int start = lexer->pos;
+
+    while(true)
+    {
+        char character = PeekNextCharacter(lexer);
+
+        if(character == '\'')
+        {
+            break;
+        }
+        else if(IsVisibleCharacter(character))
+        {
+            GetNextCharacter(lexer);
+            len++;
+        }
+        else if(character == 0 || IsWhiteSpaceCharacter(character))
+        {
+            PrintErrorLocationInSource(lexer->loadedFile, start - 1, lexer->line + 1, lexer->column + 1, "string literal missing terminating character '\''");
+            exit(1);
+        }
+
+        if(len > 1) 
+        {
+            PrintErrorLocationInSource(lexer->loadedFile, start - 1, lexer->line + 1, lexer->column + 1, "multi-character character constant found");
+            exit(1);
+        }
+    }
+
+    GetNextCharacter(lexer);
+
+    Token token = {0};
+    token.type = TOKEN_CHAR_CONSTANT;
+    token.characterValue = lexer->source[start];
+    token.line = lexer->line;
+    token.column = lexer->column;
+    token.pos = start - 1;
+    token.size = len + 2;
     return token;
 }
 
@@ -165,7 +227,8 @@ Token TokenizeStringLiteral(Lexer *lexer)
 
     unsigned int len = 0;
     unsigned int start = lexer->pos;
-    
+
+    // TODO: parse new_line character inside the string literal -> "\n" 
     while(true)
     {
         char character = PeekNextCharacter(lexer);
@@ -181,7 +244,7 @@ Token TokenizeStringLiteral(Lexer *lexer)
         }
         else if(character == 0)
         {
-            PrintErrorLocationInSource(lexer->source, start, lexer->line+1, lexer->column+1, "string literal missing terminating character '\"'");
+            PrintErrorLocationInSource(lexer->loadedFile, start - 1, lexer->line + 1, lexer->column + 1, "string literal missing terminating character '\"'");
             exit(1);
         }
     }
@@ -190,16 +253,16 @@ Token TokenizeStringLiteral(Lexer *lexer)
 
     if(len == 0)
     {
-        PrintErrorLocationInSource(lexer->source, start, lexer->line+1, lexer->column+1, "string literal cannot be empty");
+        PrintErrorLocationInSource(lexer->loadedFile, start, lexer->line+1, lexer->column+1, "string literal cannot be empty");
         exit(1);
     }
 
     Token token = {0};
     token.type = TOKEN_STRING_CONSTANT;
-    token.size = len;
+    token.size = len + 2;
     token.column = lexer->column;
     token.line = lexer->line;
-
+    token.pos = start - 1;
     token.stringValue = (char*)malloc(len + 1);
     strncpy(token.stringValue, &lexer->source[start], len);
     token.stringValue[len] = 0;
@@ -220,7 +283,7 @@ Token TokenizeIdentifier(Lexer *lexer)
             GetNextCharacter(lexer);
             len++;
         }
-        else 
+        else
         {
             break;
         }
@@ -231,7 +294,7 @@ Token TokenizeIdentifier(Lexer *lexer)
     token.size = len;
     token.column = lexer->column;
     token.line = lexer->line;
-    
+    token.pos = start;
     token.identifier = (char*)malloc(len + 1);
     strncpy(token.identifier, &lexer->source[start], len);
     token.identifier[len] = 0;
@@ -277,7 +340,8 @@ bool TryTokenizeKeyword(Lexer *lexer, Token *token)
     token->line = lexer->line;
     token->size = len;
     token->type = keywordList[index].tokenType;
-    
+    token->pos = start;
+
     return keywordMatched;
 }
 
@@ -297,25 +361,36 @@ void PushToken(TokenList *tokenList, Token token)
     tokenList->tokens[tokenList->count - 1] = token;
 }
 
-TokenList TokenizeSource(char *source)
+Token MakeSingleCharacterToken(Lexer *lexer, unsigned int tokenType)
+{
+    Token token = {0};
+    token.type = tokenType;
+    token.size = 1;
+    token.line = lexer->line;
+    token.column = lexer->column;
+    token.pos = lexer->pos;
+    return token;
+}
+
+TokenList TokenizeSource(LoadedFile loadedFile)
 {
     TokenList tokenList = {0};
     
     Lexer lexer = {0};
-    lexer.source = source;
-    
+    lexer.source = loadedFile.source.data;
+    lexer.loadedFile = loadedFile;
+
     while(true)
     {
         char character = PeekNextCharacter(&lexer);
 
-        if(IsNumeralCharacter(character))
+        if(IsNumeralCharacter(character)) // integer contants
         {
             Token token = TokenizeIntegerConstant(&lexer);
             lexer.column += token.size;
-            token.pos = lexer.pos;
             PushToken(&tokenList, token);
         }
-        else if(IsIdentifierCharacter(character))
+        else if(IsIdentifierCharacter(character)) // identifiers and keywords
         {
             Token token = {0};
             bool isKeyword = TryTokenizeKeyword(&lexer, &token);
@@ -323,235 +398,228 @@ TokenList TokenizeSource(char *source)
             {
                 token = TokenizeIdentifier(&lexer);
             }
-
             lexer.column += token.size;
-            token.pos = lexer.pos;
-            PushToken(&tokenList, token);
-        }
-        else if(character == '+')
-        {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_PLUS;
-            token.opType = ARITHMETIC_OP_ADD;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
-            PushToken(&tokenList, token);
-        }
-        else if(character == '-')
-        {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_MINUS;
-            token.opType = ARITHMETIC_OP_SUB;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
-            PushToken(&tokenList, token);
-        }
-        else if(character == '*')
-        {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_MULTIPLY;
-            token.opType = ARITHMETIC_OP_MUL;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-
-            PushToken(&tokenList, token);
-        }
-        else if(character == '/')
-        {
-            GetNextCharacter(&lexer);
-            char c = PeekNextCharacter(&lexer);
-
-            // single line comment            
-            if(c == '/') {
-                while(true)
-                {
-                    c = PeekNextCharacter(&lexer);
-                    if(c == '\n' || c == 0)
-                    {
-                        break;
-                    }
-                    GetNextCharacter(&lexer);
-                }
-            } else {
-                Token token = {0};
-                token.type = TOKEN_DIVIDE;
-                token.opType = ARITHMETIC_OP_DIV;
-                token.line = lexer.line;
-                token.column = lexer.column;
-                token.size = 1;
-                lexer.column += token.size;    
-                token.pos = lexer.pos;
-                PushToken(&tokenList, token);
-            }
-        }
-        else if(character == '%')
-        {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_MODULUS;
-            token.opType = ARITHMETIC_OP_MOD;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
             PushToken(&tokenList, token);
         }
         else if(character == '\"') // string literal
         {
             Token token = TokenizeStringLiteral(&lexer);
             lexer.column += token.size + 2;
-            token.pos = lexer.pos;
             PushToken(&tokenList, token);
         }
-        else if(character == '=')
+        else if(character == '\'') // character constant
         {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            
-            char c = PeekNextCharacter(&lexer);
-            if(c == '=')
-            {
-                GetNextCharacter(&lexer);
-                token.type = TOKEN_EQ_EQ;
-                token.opType = COMPARE_OP_EQ_EQ;
-                token.line = lexer.line;
-                token.column = lexer.column;
-                token.size = 2;
-            }
-            else
-            {
-                token.type = TOKEN_EQUAL;
-                token.line = lexer.line;
-                token.column = lexer.column;
-                token.size = 1;
-            }
-
+            Token token = TokenizeCharacterConstant(&lexer);
             lexer.column += token.size;
-            token.pos = lexer.pos;
             PushToken(&tokenList, token);
         }
-        else if(character == '<')
+        else if(character == '+')
+        {
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_PLUS);
+            lexer.column += 1;
+            PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
+       }
+        else if(character == '-')
+        {
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_MINUS);
+            lexer.column += 1;
+            PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
+        }
+        else if(character == '*')
+        {
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_MULTIPLY);
+            lexer.column += 1;
+            PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
+        }
+        else if(character == '%')
+        {
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_MODULUS);
+            lexer.column += 1;
+            PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
+        }
+        else if(character == '/')
         {
             GetNextCharacter(&lexer);
 
-            Token token = {0};
+            char next = PeekNextCharacter(&lexer);
             
-            char c = PeekNextCharacter(&lexer);
-            if(c == '=')
+            if(next == '/') // single line comment
             {
                 GetNextCharacter(&lexer);
-                token.type = TOKEN_LT_EQ;
-                token.opType = COMPARE_OP_LT_EQ;
-                token.line = lexer.line;
-                token.column = lexer.column;
-                token.size = 2;
-            }
-            else
-            {
-                token.type = TOKEN_LT;
-                token.opType = COMPARE_OP_LT;
-                token.line = lexer.line;
-                token.column = lexer.column;
-                token.size = 1;
-            }
 
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-
-            PushToken(&tokenList, token);
-        }
-        else if(character == '>')
-        {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            
-            char c = PeekNextCharacter(&lexer);
-            if(c == '=')
+                while(true)
+                {
+                    next = PeekNextCharacter(&lexer);
+                    if(next == '\n' || next == 0) break;
+                    GetNextCharacter(&lexer);
+                }
+            } 
+            else if(next == '#')  // multiline comment
             {
                 GetNextCharacter(&lexer);
-                token.type = TOKEN_GT_EQ;
-                token.opType = COMPARE_OP_GT_EQ;
-                token.line = lexer.line;
-                token.column = lexer.column;
-                token.size = 2;
-            }
-            else
-            {
-                token.type = TOKEN_GT;
-                token.opType = COMPARE_OP_GT;
-                token.line = lexer.line;
-                token.column = lexer.column;
-                token.size = 1;
-            }
+                lexer.column++;
 
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
-            PushToken(&tokenList, token);
-        }
-        else if(character == '!')
-        {
-            GetNextCharacter(&lexer);
-            char c = PeekNextCharacter(&lexer);
+                while(true)
+                {
+                    next = PeekNextCharacter(&lexer);
 
-            Token token = {0};
-            
-            if(c == '=')
-            {
-                GetNextCharacter(&lexer);
-                token.type = TOKEN_GT_EQ;
-                token.opType = COMPARE_OP_NOT_EQ;
-                token.line = lexer.line;
-                token.column = lexer.column;
-                token.size = 2;
+                    if(next == 0) break;
+                    
+                    if(next == '\n') 
+                    {
+                        lexer.line++;
+                        lexer.column = 0;
+                    }
+                    else if(next == '#') 
+                    {
+                        GetNextCharacter(&lexer);
+                        lexer.column++;
+                        next = PeekNextCharacter(&lexer);
+                        if(next == '/') 
+                        {
+                            GetNextCharacter(&lexer);
+                            lexer.column++;
+                            goto exit;
+                        }
+                        GetNextCharacter(&lexer);
+                        lexer.column++;
+                        continue;
+                    }
+                    
+                    GetNextCharacter(&lexer);
+                    lexer.column++;
+                }
+                exit: ;
             }
             else 
             {
-                token.type = TOKEN_NOT;
-                token.opType = BOOL_OP_NOT;
+                Token token = MakeSingleCharacterToken(&lexer, TOKEN_DIVIDE);
+                lexer.column += 1;
+                PushToken(&tokenList, token);
+            }
+        }
+        else if(character == '=')
+        {
+            unsigned int startPos = lexer.pos;
+            GetNextCharacter(&lexer);
+            
+            char next = PeekNextCharacter(&lexer);
+            if(next == '=')
+            {
+                GetNextCharacter(&lexer);
+                Token token = {0};
+                token.type = TOKEN_EQ_EQ;
+                token.size = 2;
                 token.line = lexer.line;
                 token.column = lexer.column;
-                token.size = 1;
+                token.pos = startPos;                
+                lexer.column += token.size;
+                PushToken(&tokenList, token);
             }
+            else
+            {
+                Token token = MakeSingleCharacterToken(&lexer, TOKEN_EQUAL);
+                token.pos = startPos;
+                lexer.column += 1;
+                PushToken(&tokenList, token);            
+            }
+        }
+        else if(character == '<')
+        {
+            unsigned int startPos = lexer.pos;
 
-            lexer.column += token.size;
-            token.pos = lexer.pos;
+            GetNextCharacter(&lexer);
+
+            char next = PeekNextCharacter(&lexer);
+            if(next == '=')
+            {
+                GetNextCharacter(&lexer);
+                Token token = {0};
+                token.type = TOKEN_LT_EQ;
+                token.line = lexer.line;
+                token.column = lexer.column;
+                token.size = 2;
+                token.pos = lexer.pos;
+                lexer.column += token.size;
+                PushToken(&tokenList, token);
+            }
+            else
+            {
+                Token token = MakeSingleCharacterToken(&lexer, TOKEN_LT);
+                token.pos = startPos;
+                lexer.column += 1;
+                PushToken(&tokenList, token);
+            }
+        }
+        else if(character == '>')
+        {
+            unsigned int startPos = lexer.pos;
+
+            GetNextCharacter(&lexer);
             
-            PushToken(&tokenList, token);
+            char next = PeekNextCharacter(&lexer);
+            if(next == '=')
+            {
+                GetNextCharacter(&lexer);
+                Token token = {0};
+                token.type = TOKEN_GT_EQ;
+                token.line = lexer.line;
+                token.column = lexer.column;
+                token.size = 2;
+                token.pos = startPos;        
+                lexer.column += token.size;
+                PushToken(&tokenList, token);
+            }
+            else
+            {
+                Token token = MakeSingleCharacterToken(&lexer, TOKEN_GT);
+                token.pos = startPos;
+                lexer.column += 1;
+                PushToken(&tokenList, token);
+            }
+        }
+        else if(character == '!')
+        {
+            unsigned int startPos = lexer.pos;
+
+            GetNextCharacter(&lexer);
+            
+            char next = PeekNextCharacter(&lexer);
+
+            if(next == '=')
+            {
+                GetNextCharacter(&lexer);
+                Token token = {0};
+                token.type = TOKEN_GT_EQ;
+                token.line = lexer.line;
+                token.column = lexer.column;
+                token.size = 2;                    
+                token.pos = startPos;            
+                lexer.column += token.size;
+                PushToken(&tokenList, token);
+            }
+            else 
+            {
+                Token token = MakeSingleCharacterToken(&lexer, TOKEN_NOT);
+                token.pos = startPos;
+                lexer.column += 1;
+                PushToken(&tokenList, token);
+            }
         }
         else if(character == '&')
         {
+            unsigned int startPos = lexer.pos;
+
             GetNextCharacter(&lexer);
-            char c = PeekNextCharacter(&lexer);
+            char next = PeekNextCharacter(&lexer);
             
-            if(c != '&')
+            if(next != '&')
             {
-                PrintErrorLocationInSource(lexer.source, lexer.pos - 1, lexer.line + 1, lexer.column + 1, "found '&' expected '&&'");
+                PrintErrorLocationInSource(lexer.loadedFile, lexer.pos - 1, lexer.line + 1, lexer.column + 1, "found '&' expected '&&'");
                 exit(1);
             }
 
@@ -559,24 +627,25 @@ TokenList TokenizeSource(char *source)
             
             Token token = {0};
             token.type = TOKEN_AND;
-            token.opType = BOOL_OP_AND;
             token.line = lexer.line;
             token.column = lexer.column;
+            token.pos = startPos;
             token.size = 2;
-         
+
             lexer.column += token.size;
-            token.pos = lexer.pos;
             
             PushToken(&tokenList, token);
         }
         else if(character == '|')
         {
-            GetNextCharacter(&lexer);
-            char c = PeekNextCharacter(&lexer);
+            unsigned int startPos = lexer.pos;
 
-            if(c != '|')
+            GetNextCharacter(&lexer);
+            char next = PeekNextCharacter(&lexer);
+
+            if(next != '|')
             {
-                PrintErrorLocationInSource(lexer.source, lexer.pos - 1, lexer.line + 1, lexer.column + 1, "found '|' expected '||'");
+                PrintErrorLocationInSource(lexer.loadedFile, lexer.pos - 1, lexer.line + 1, lexer.column + 1, "found '|' expected '||'");
                 exit(1);
             }
 
@@ -584,172 +653,91 @@ TokenList TokenizeSource(char *source)
             
             Token token = {0};
             token.type = TOKEN_OR;
-            token.opType = BOOL_OP_OR;
             token.line = lexer.line;
             token.column = lexer.column;
             token.size = 2;
-         
+            token.pos = startPos;
+
             lexer.column += token.size;
-            token.pos = lexer.pos;
             
             PushToken(&tokenList, token);
         }
         else if(character == '(')
         {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_LEFT_PAREN;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_LEFT_PAREN);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
         }
         else if(character == ')')
         {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_RIGHT_PAREN;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_RIGHT_PAREN);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
         }
         else if(character == '{')
         {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_LEFT_BRACE;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_LEFT_BRACE);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
         }
         else if(character == '}')
         {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_RIGHT_BRACE;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_RIGHT_BRACE);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
         }
         else if(character == '[')
         {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_LEFT_BRACKET;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_LEFT_BRACKET);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
         }
         else if(character == ']')
         {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_RIGHT_BRACKET;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_RIGHT_BRACKET);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
         }
         else if(character == ';')
         {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_SEMICOLON;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_SEMICOLON);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
         }
         else if(character == ',')
         {
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_COMMA;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
-            
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_COMMA);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
         }
         else if(character == ':')
         {            
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_COLON;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_COLON);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
         }
         else if(character == '.')
         {            
-            GetNextCharacter(&lexer);
-
-            Token token = {0};
-            token.type = TOKEN_DOT;
-            token.line = lexer.line;
-            token.column = lexer.column;
-            token.size = 1;
-            
-            lexer.column += token.size;
-            token.pos = lexer.pos;
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_DOT);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
         }
         else if(character == 0)
         {
-            Token token = {0};
-            token.type = TOKEN_PROGRAM_END;
-            token.column = lexer.column;
-            token.line = lexer.line;
-            token.pos = lexer.pos;
+            Token token = MakeSingleCharacterToken(&lexer, TOKEN_PROGRAM_END);
+            lexer.column += 1;
             PushToken(&tokenList, token);
+            GetNextCharacter(&lexer);
             break;
         }
         else if(character == '\n')
@@ -765,7 +753,9 @@ TokenList TokenizeSource(char *source)
         }
         else
         {
-            printf("%u:%u: error: unsupported character '%c'\n",  lexer.line + 1, lexer.column + 1, character);
+            char errorMsg[500] = {0};
+            sprintf(errorMsg, "unsupported character ascii code '%d'", character);
+            PrintErrorLocationInSource(lexer.loadedFile, lexer.pos, lexer.line + 1, lexer.column + 1, errorMsg);
             exit(1);
         }
     }
@@ -779,6 +769,7 @@ char *TokenTypeToString(unsigned int type)
     {
         case TOKEN_INTEGER_CONSTANT:        return "token_integer_constant"; break;
         case TOKEN_STRING_CONSTANT:         return "token_string_constant"; break;
+        case TOKEN_CHAR_CONSTANT:           return "token_character_constant"; break;
         case TOKEN_IDENTIFIER:              return "token_identifier"; break;
         case TOKEN_PLUS:                    return "token_plus"; break;
         case TOKEN_MINUS:                   return "token_minus"; break;
@@ -815,12 +806,16 @@ char *TokenTypeToString(unsigned int type)
         case TOKEN_COMMA:                   return "token_comma"; break;
         case TOKEN_DOT:                     return "token_dot"; break;
         case TOKEN_PROGRAM_END:             return "token_program_end"; break;
-        case TOKEN_TYPE_COUNT:              return "token_count"; break;
         default:                            return "unknown_token_type";
     }
 }
 
-void PrintTokenInfo(Token token)
+void PrintTokenInfo(Token token, char *source)
 {
-    printf("%u:%u:%u type: '%s', size: %u\n", token.line+1, token.column+1, token.pos, TokenTypeToString(token.type), token.size);
+    printf("line %u, column: %u, position: %u, type: '%s', size: %u, lexeme: '", token.line+1, token.column+1, token.pos, TokenTypeToString(token.type), token.size);
+    for(int n = token.pos; n < token.pos + token.size; n++) 
+    {
+        printf("%c", source[n]);
+    }
+    printf("'\n"); 
 }

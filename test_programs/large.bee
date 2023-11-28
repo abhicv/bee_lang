@@ -1,20 +1,15 @@
-
-fn GetNextToken(Parser *parser) : Token
-{
-    return tokens[tokenIndex++];
+fn GetNextToken(parser: Parser) : Token {
+    return tokens[tokenIndex + 1];
 }
 
-Token PeekNextToken(Parser *parser)
-{
-    return parser->tokenList.tokens[parser->tokenIndex];
+fn PeekNextToken(parser: Parser) : Token {
+    return parser.tokenList.tokens[parser.tokenIndex];
 }
 
-bool AcceptToken(Parser *parser, unsigned int tokenType)
-{
-    Token token = PeekNextToken(parser);
+fn AcceptToken(parser: Parser, tokenType: TokenType) : bool {
+    let token = PeekNextToken(parser);
     
-    if(token.type == tokenType)
-    {
+    if token.type == tokenType {
         GetNextToken(parser);
         return true;
     }
@@ -22,17 +17,13 @@ bool AcceptToken(Parser *parser, unsigned int tokenType)
     return false;
 }
 
-Token ExpectToken(Parser *parser, unsigned int tokenType)
-{
-    Token token = PeekNextToken(parser);
+fn ExpectToken(parser: Parser, tokenType: TokenType) : Token {
+    let token = PeekNextToken(parser);
     
-    if(token.type == tokenType)
-    {
+    if token.type == tokenType {
         return GetNextToken(parser);
-    }
-    else
-    {
-        printf("%s:%u:%u: error: expected '%s' but found '%s'\n", parser->fileName, token.line+1, token.column+1, TokenTypeToString(tokenType), TokenTypeToString(token.type));
+    } else {
+        printf("%s:%u:%u: error: expected '%s' but found '%s'\n", parser.fileName, token.line+1, token.column+1, TokenTypeToString(tokenType), TokenTypeToString(token.type));
         exit(1);
     }
 }
@@ -42,8 +33,8 @@ struct OpInfo {
     associatvity : int;
 }
 
-bool IsBinOpToken(unsigned int type)
-{
+/#
+bool IsBinOpToken(unsigned int type) {
     if(type == TOKEN_PLUS ||
     type == TOKEN_MINUS ||
     type == TOKEN_MULTIPLY ||
@@ -64,12 +55,7 @@ bool IsBinOpToken(unsigned int type)
     return false;
 }
 
-Index ParseExpression(AST *ast, Parser *parser, int minPrec);
-Index ParseAtom(AST *ast, Parser *parser);
-
-// precedence climbing - https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
-Index ParseExpression(AST *ast, Parser *parser, int minPrec)
-{
+Index ParseExpression(AST *ast, Parser *parser, int minPrec) {
     Index left = ParseAtom(ast, parser);
 
     while(true)
@@ -178,48 +164,6 @@ Index ParseAtom(AST *ast, Parser *parser)
     printf("%s:%u:%u: error: expecting an expression before '%s'\n", parser->fileName, next.line+1, next.column+1, TokenTypeToString(next.type));
     exit(1);
 }
-
-// Index ParseSructFieldAccess(AST *ast, Parser *parser)
-// {
-//     Node fieldAccessNode = {0};
-//     fieldAccessNode.type = NODE_FIELD_ACCESS;
-
-//     while(true)
-//     {
-//         Token first = GetNextToken(parser);
-//         Token second = GetNextToken(parser);
-
-//         if(first.type == TOKEN_IDENTIFIER && second.type == TOKEN_DOT)
-//         {
-//             Node id = {0};
-//             id.type = NODE_IDENTIFIER;
-//             id.identifier = first.identifier;
-
-//             Index index = PushNode(ast, id);
-//             PushIndex(&fieldAccessNode.fieldIndexList, &fieldAccessNode.fieldIndexCount, index);
-//         } 
-//         else 
-//         {
-//             parser->tokenIndex -= 2;
-//             break;
-//         }
-//     }
-
-//     Token token = ExpectToken(parser, TOKEN_IDENTIFIER);
-
-//     Node id = {0};
-//     id.type = NODE_IDENTIFIER;
-//     id.identifier = token.identifier;
-
-//     Index index = PushNode(ast, id);
-
-//     PushIndex(&fieldAccessNode.fieldIndexList, &fieldAccessNode.fieldIndexCount, index);
-
-//     return PushNode(ast, fieldAccessNode);
-// }
-
-Index ParseStatement(AST *ast, Parser *parser);
-Index ParseStatementList(AST *ast, Parser *parser);
 
 Index ParseLValue(AST *ast, Parser *parser)
 {
@@ -584,3 +528,6 @@ Index ParseProgram(AST *ast, Parser *parser)
     
     return PushNode(ast, node);
 }
+
+#/
+

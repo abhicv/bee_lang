@@ -1,5 +1,6 @@
 #include "ast.h"
 
+// TODO: need to increase based on requirement
 #define MAX_NODE_COUNT 1000
 
 void InitAST(AST *ast)
@@ -46,6 +47,8 @@ void PrintNode(AST ast, Index index, int indent)
     for(int n = 0; n < indent; n++) printf("   ");
     printf("+- ");
     indent++;
+
+    if(index == -1) return;
     
     Node node = ast.nodeList[index];
     
@@ -95,7 +98,11 @@ void PrintNode(AST ast, Index index, int indent)
         {
             printf("var decl : \n");
             PrintNode(ast, node.varDecl.id, indent);
-            PrintNode(ast, node.varDecl.type, indent);
+
+            if(node.varDecl.isTypeAnnotated)
+            {
+                PrintNode(ast, node.varDecl.type, indent);
+            }
         }
         break;
 
@@ -280,6 +287,12 @@ void PrintNode(AST ast, Index index, int indent)
         case NODE_STRING_CONSTANT:
         {
             printf("string const: '%s'\n", node.string.value);
+        }
+        break;
+
+        case NODE_CHARACTER_CONSTANT:
+        {
+            printf("character const: '%c'\n", node.character.value);
         }
         break;
 

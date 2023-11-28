@@ -34,15 +34,15 @@ Token ExpectToken(Parser *parser, unsigned int tokenType)
     else
     {
         char errorMsg[500] = {0};
-        sprintf(errorMsg, "expected '%s' but found '%s'", TokenTypeToString(tokenType), TokenTypeToString(token.type));
-        PrintErrorLocationInSource(parser->loadedFile.data, token.pos - token.size, token.line + 1, token.column + 1, errorMsg);
+        int count = sprintf(errorMsg, "expected '%s' but found '%s'", TokenTypeToString(tokenType), TokenTypeToString(token.type));
+        errorMsg[count] = 0;
+        PrintErrorLocationInSource(parser->loadedFile, token.pos, token.line + 1, token.column + 1, errorMsg);
 
+        // GetNextToken(parser);
         Token dummy = {0};
         token.type = tokenType;
         token.identifier = "this_is_a_dummy";
         return token;
-
-        // exit(1);
     }
 }
 
@@ -99,10 +99,36 @@ bool IsBinOpToken(unsigned int type)
     return false;
 }
 
+unsigned int OpTypeFromTokenType(unsigned int tokenType)
+{
+    if(IsBinOpToken(tokenType))
+    {
+        switch (tokenType)
+        {
+        case TOKEN_PLUS:        return ARITHMETIC_OP_ADD;
+        case TOKEN_MINUS:       return ARITHMETIC_OP_SUB;
+        case TOKEN_MULTIPLY:    return ARITHMETIC_OP_MUL;
+        case TOKEN_DIVIDE:      return ARITHMETIC_OP_DIV;
+        case TOKEN_MODULUS:     return ARITHMETIC_OP_MOD;
+        case TOKEN_LT:          return COMPARE_OP_LT;
+        case TOKEN_GT:          return COMPARE_OP_GT;
+        case TOKEN_EQ_EQ:       return COMPARE_OP_EQ_EQ;
+        case TOKEN_NOT_EQ:      return COMPARE_OP_NOT_EQ;
+        case TOKEN_LT_EQ:       return COMPARE_OP_LT_EQ;
+        case TOKEN_GT_EQ:       return COMPARE_OP_GT_EQ;
+        case TOKEN_AND:         return BOOL_OP_AND;
+        case TOKEN_OR:          return BOOL_OP_OR;
+        }
+    }
+
+    return NONE_OP;
+}
+
 Index ParseExpression(AST *ast, Parser *parser, int minPrec);
 Index ParseAtom(AST *ast, Parser *parser);
 Index ParseStatement(AST *ast, Parser *parser);
 Index ParseStatementList(AST *ast, Parser *parser);
+Index ParseLValue(AST *ast, Parser *parser);
 
 // precedence climbing - https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 Index ParseExpression(AST *ast, Parser *parser, int minPrec)
@@ -114,17 +140,18 @@ Index ParseExpression(AST *ast, Parser *parser, int minPrec)
         Token next = PeekNextToken(parser);
         if(!IsBinOpToken(next.type)) break;
         
-        int prec = opInfoTable[next.opType].precedence; 
+        unsigned int opType = OpTypeFromTokenType(next.type);
+        int prec = opInfoTable[opType].precedence; 
         if(prec < minPrec) break;
         
         GetNextToken(parser);
         
         Node node = {0};
         node.type = NODE_OPERATOR;
-        node.operator.opType = next.opType;
+        node.operator.opType = opType;
         node.operator.left = left;
         
-        if(opInfoTable[next.opType].associatvity == LEFT_ASSOCIATIVE)
+        if(opInfoTable[opType].associatvity == LEFT_ASSOCIATIVE)
         {
             node.operator.right = ParseExpression(ast, parser, prec + 1);
         }
@@ -164,8 +191,6 @@ Index ParseFunctionCall(AST *ast, Parser *parser)
     return PushNode(ast, node);
 }
 
-Index ParseLValue(AST *ast, Parser *parser);
-
 Index ParseAtom(AST *ast, Parser *parser)
 {
     if(AcceptToken(parser, TOKEN_IDENTIFIER))
@@ -193,6 +218,13 @@ Index ParseAtom(AST *ast, Parser *parser)
         Node node = {0};
         node.type = NODE_INTEGER_CONSTANT;
         node.integer.value = parser->tokenList.tokens[parser->tokenIndex - 1].integerValue;
+        return PushNode(ast, node);
+    }
+    else if(AcceptToken(parser, TOKEN_CHAR_CONSTANT))
+    {
+        Node node = {0};
+        node.type = NODE_CHARACTER_CONSTANT;
+        node.character.value = parser->tokenList.tokens[parser->tokenIndex - 1].characterValue;
         return PushNode(ast, node);
     }
     else if(AcceptToken(parser, TOKEN_STRING_CONSTANT))
@@ -228,7 +260,7 @@ Index ParseAtom(AST *ast, Parser *parser)
 
     char errorMsg[500] = {0};
     sprintf(errorMsg, "expecting an expression before '%s'\n", TokenTypeToString(next.type));
-    PrintErrorLocationInSource(parser->loadedFile.data, next.pos, next.line + 1, next.column + 1, errorMsg);
+    PrintErrorLocationInSource(parser->loadedFile, next.pos, next.line + 1, next.column + 1, errorMsg);
     exit(1);
 }
 
@@ -306,7 +338,7 @@ Index ParseAssignmentStatement(AST *ast, Parser *parser)
     return PushNode(ast, node);
 }
 
-Index ParseType(AST *ast, Parser *parser) 
+Index ParseType(AST *ast, Parser *parser)
 {
     Node node = {0};
     node.type = NODE_TYPE_ANNOTATION;
@@ -319,20 +351,33 @@ Index ParseType(AST *ast, Parser *parser)
         node.typeAnnotation.id = next.identifier;
         GetNextToken(parser);
     }
-    else if(next.type == TOKEN_LEFT_BRACKET) 
+    else if(next.type == TOKEN_LEFT_BRACKET) // array type
     {
         GetNextToken(parser);
-        Token typeId = ExpectToken(parser, TOKEN_IDENTIFIER);
-        ExpectToken(parser, TOKEN_RIGHT_BRACKET);
-        
-        node.typeAnnotation.id = typeId.identifier;
-        node.typeAnnotation.isArrayType = true;
+
         node.typeAnnotation.arrayDim = 0;
-    } 
-    else {
+
+        Token maybeIntegerToken = PeekNextToken(parser);
+
+        // TODO: do this checking depending on whether type annotation is for struct field, function param, variable declaration
+        if (maybeIntegerToken.type == TOKEN_INTEGER_CONSTANT) 
+        {
+            node.typeAnnotation.arrayDim = maybeIntegerToken.integerValue;
+            GetNextToken(parser);
+        }
+
+        ExpectToken(parser, TOKEN_RIGHT_BRACKET);
+
+        Token typeId = ExpectToken(parser, TOKEN_IDENTIFIER);
+
+        node.typeAnnotation.id = typeId.identifier;        
+        node.typeAnnotation.isArrayType = true;
+    }
+    else 
+    {
         char errorMsg[500] = {0};
         sprintf(errorMsg, "expected type, but found %s", TokenTypeToString(next.type));
-        PrintErrorLocationInSource(parser->loadedFile.data, next.pos, next.line + 1, next.column + 1, errorMsg);
+        PrintErrorLocationInSource(parser->loadedFile, next.pos, next.line + 1, next.column + 1, errorMsg);
         exit(1);
     }
     
@@ -341,6 +386,10 @@ Index ParseType(AST *ast, Parser *parser)
 
 Index ParseVarDeclStatement(AST *ast, Parser *parser)
 {
+    Node node = {0};
+    node.type = NODE_VARIABLE_DECLARATION;
+    node.varDecl.isTypeAnnotated = false;
+
     ExpectToken(parser, TOKEN_KEYWORD_LET);
     
     Token id = ExpectToken(parser, TOKEN_IDENTIFIER);
@@ -348,20 +397,20 @@ Index ParseVarDeclStatement(AST *ast, Parser *parser)
     Node idNode = {0};
     idNode.type = NODE_IDENTIFIER;
     idNode.identifier.value = id.identifier;
-    
-    ExpectToken(parser, TOKEN_COLON);
-    
-    Index typeAnnoIndex = ParseType(ast, parser);
-    
-    Node node = {0};
-    node.type = NODE_VARIABLE_DECLARATION;
+
     node.varDecl.id = PushNode(ast, idNode);
-    node.varDecl.type = typeAnnoIndex;
+
+    // NOTE: type annotation for variable declaration is optional
+    if(AcceptToken(parser, TOKEN_COLON)) {
+        node.varDecl.type = ParseType(ast, parser);
+        node.varDecl.isTypeAnnotated = true;
+    }
     
     Token next = PeekNextToken(parser);
     
     // initialization of variable
-    if(next.type == TOKEN_EQUAL) {
+    if(next.type == TOKEN_EQUAL) 
+    {
         GetNextToken(parser);
         
         Index left = PushNode(ast, node);
@@ -373,8 +422,7 @@ Index ParseVarDeclStatement(AST *ast, Parser *parser)
         assignNode.type = NODE_ASSIGN_STATEMENT;
         assignNode.assignStmt.lValue = left;
         assignNode.assignStmt.expression = right;
-        return PushNode(ast, assignNode);
-        
+        return PushNode(ast, assignNode);        
     }
     
     ExpectToken(parser, TOKEN_SEMICOLON);
@@ -662,6 +710,7 @@ Index ParseProgram(AST *ast, Parser *parser)
         }
         else
         {
+            // TODO: dont eat the token, throw an error like unepxected keyword 
             GetNextToken(parser);
         }
     }
