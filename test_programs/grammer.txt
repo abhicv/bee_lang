@@ -14,7 +14,7 @@ function_def:
 
 struct_fields: 
         | identifier ':' type_annotation ';' struct_fields
-        | identifier ':' type_annotation ';'
+        | identifier ':' type_annotation
         | empty
 
 type_annotation: 

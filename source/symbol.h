@@ -1,17 +1,19 @@
 #ifndef SYMBOL_H
 #define SYMBOL_H
 
+#include <stdbool.h>
+
 typedef struct {
     const char *name;
     unsigned int typeTableIndex;
     bool isArray;
-    unsigned int arraySize;    
+    unsigned int arraySize;
 } Symbol, Parameter, StructField;
 
 typedef struct {
     Symbol *symbols;
     unsigned int count;
-} SymbolTable, ParameterList, StructFieldList;
+} SymbolTable, ParameterList, StructFieldList, LocalSymbolList;
 
 typedef struct {
     const char *id;
@@ -27,6 +29,10 @@ typedef struct {
         StructFieldList fieldList;
     };
 
+    LocalSymbolList localSymbolList;
+
+    Index astIndex;
+
 } Type;
 
 typedef struct {
@@ -38,9 +44,11 @@ void PushType(TypeTable *table, Type type);
 void PushSymbol(SymbolTable *table, Symbol symbol);
 
 int GetTypeTableIndexForId(TypeTable *typeTable, const char *id);
+int GetTypeTableIndexForFunctionId(TypeTable *typeTable, const char *id) ;
+
 int GetSymbolTableIndexForId(SymbolTable *symbolTable, const char *symbolName);
 
-void BuildTypeTable(AST *ast, Index rootIndex, TypeTable *globalTypeTable);
+bool BuildTypeTable(AST *ast, Index rootIndex, TypeTable *globalTypeTable);
 
 void PrintType(Type type);
 void PrintTypeTable(TypeTable typeTable);

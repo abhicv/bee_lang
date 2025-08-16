@@ -12,7 +12,14 @@ void PushType(TypeTable *table, Type type)
     else 
     {
         table->count++;
-        table->types = (Type*)realloc(table->types, sizeof(Type) * table->count);
+
+        Type *types = (Type*)realloc(table->types, sizeof(Type) * table->count);
+        if(types == NULL)
+        {
+            printf("[ERROR] memory allocation for types array failed");
+            return;
+        }
+        table->types = types;
     }
 
     table->types[table->count - 1] = type;
@@ -34,11 +41,34 @@ void PushSymbol(SymbolTable *table, Symbol symbol)
     table->symbols[table->count - 1] = symbol;
 }
 
+void PushField(SymbolTable *table, StructField field) 
+{
+    PushSymbol(table, field);
+}
+
+void PushParam(SymbolTable *table, Parameter param) 
+{
+    PushSymbol(table, param);
+}
+
 int GetTypeTableIndexForId(TypeTable *typeTable, const char *id) 
 {
     for(int n = 0; n < typeTable->count; n++) 
     {
         if(strcmp(typeTable->types[n].id, id) == 0) 
+        {
+            return n;
+        }        
+    }
+
+    return -1;
+}
+
+int GetTypeTableIndexForFunctionId(TypeTable *typeTable, const char *id) 
+{
+    for(int n = 0; n < typeTable->count; n++) 
+    {
+        if(strcmp(typeTable->types[n].id, id) == 0 && typeTable->types[n].isFunction) 
         {
             return n;
         }        
@@ -61,82 +91,98 @@ int GetSymbolTableIndexForId(SymbolTable *symbolTable, const char *symbolName)
     return -1;
 }
 
-void BuildTypeTable(AST *ast, Index rootIndex, TypeTable *globalTypeTable)
+bool BuildTypeTable(AST *ast, Index rootIndex, TypeTable *typeTable)
 {
-    if(ast == NULL) return;
-    if(globalTypeTable == NULL) return;
-    if(rootIndex >= ast->nodeCount) return;
+    if(ast == NULL) return false;
+    if(typeTable == NULL) return false;
+    if(rootIndex >= ast->nodeCount) return false;
 
     Node node = ast->nodeList[rootIndex];
-
     if(node.type == NODE_PROGRAM) 
     {
-        // insert structs
         for(int n = 0; n < node.program.defCount; n++) 
         {
             Index index = node.program.definitions[n];
             Node defNode = ast->nodeList[index];
 
+            // insert structs
             if(defNode.type == NODE_STRUCT_DEFINITION) 
             {
                 // check if type with same name already exist
-                if(GetTypeTableIndexForId(globalTypeTable, defNode.structDef.name) != -1)
+                if(GetTypeTableIndexForId(typeTable, defNode.structDef.name) != -1)
                 {
                     printf("[ERROR] redefinition of struct: '%s'\n", defNode.structDef.name);
-                    return;
+                    return false;
                 }
 
                 Type type = {0};
                 type.id = defNode.structDef.name;
                 type.isStruct = true;
+                type.astIndex = index;
 
-                int totalSize = 0;
-
-                for(int i = 0; i < defNode.structDef.fieldCount; i++)
-                {
-                    Node fieldNode = ast->nodeList[defNode.structDef.fields[i]];
-                    Node idNode = ast->nodeList[fieldNode.field.id];
-                    Node typeNode = ast->nodeList[fieldNode.field.type];
-
-                    const char* typeId = typeNode.typeAnnotation.id;
-
-                    int typeTableIndex = -1;
-
-                    // if field type name is same as the current struct name(recursive field)
-                    if(!strcmp(typeId, type.id)) {
-                        typeTableIndex = globalTypeTable->count;
-                        totalSize += 1;
-                    } else {
-                        typeTableIndex = GetTypeTableIndexForId(globalTypeTable, typeId);
-
-                        if(typeTableIndex == -1) 
-                        {
-                            printf("[ERROR] undefined type: '%s' for field: '%s' in struct: '%s'\n", typeId, idNode.identifier.value, type.id);
-                            return;
-                        }
-
-                        totalSize += globalTypeTable->types[typeTableIndex].size;
-                    }
-
-                    StructField field = {0};
-                    field.name = idNode.identifier.value;
-                    field.typeTableIndex = typeTableIndex;
-
-                    if(typeNode.typeAnnotation.isArrayType) {
-                        field.isArray = true;
-                        field.arraySize = typeNode.typeAnnotation.arrayDim;
-                    }
-
-                    PushSymbol(&(type.fieldList), field);
-                }
-
-                type.size = totalSize;
-                PushType(globalTypeTable, type);
+                PushType(typeTable, type);
             }
         }
 
-        // insert function into type table
-        for(int n = 0; n < node.program.defCount; n++) 
+        // insert struct fields
+        for(int n = 0; n < typeTable->count; n++)
+        {
+            Type *type = &typeTable->types[n];
+
+            if(type->isStruct == false) continue;
+
+            Index astIndex = type->astIndex;
+            Node defNode = ast->nodeList[astIndex];
+
+            int totalSize = 0;
+
+            for(int i = 0; i < defNode.structDef.fieldCount; i++)
+            {
+                Node fieldNode = ast->nodeList[defNode.structDef.fields[i]];
+                Node idNode = ast->nodeList[fieldNode.field.id];
+                Node typeNode = ast->nodeList[fieldNode.field.type];
+
+                const char* typeId = typeNode.typeAnnotation.id;
+
+                int typeTableIndex = -1;
+
+                // if field type name is same as the current struct name (recursive field)
+                if(!strcmp(typeId, type->id)) 
+                {
+                    typeTableIndex = n;
+                    totalSize += 1;
+                } 
+                else 
+                {
+                    typeTableIndex = GetTypeTableIndexForId(typeTable, typeId);
+
+                    if(typeTableIndex == -1) 
+                    {
+                        printf("[ERROR] undefined type: '%s' for field: '%s' in struct: '%s'\n", typeId, idNode.identifier.value, type->id);
+                        return false;
+                    }
+
+                    totalSize += typeTable->types[typeTableIndex].size;
+                }
+
+                StructField field = {0};
+                field.name = idNode.identifier.value;
+                field.typeTableIndex = typeTableIndex;
+
+                if(typeNode.typeAnnotation.isArrayType) 
+                {
+                    field.isArray = true;
+                    field.arraySize = typeNode.typeAnnotation.arrayDim;
+                }
+
+                PushField(&type->fieldList, field);
+            }
+
+            type->size = totalSize;
+        }
+
+        // insert function
+        for(int n = 0; n < node.program.defCount; n++)
         {
             Index index = node.program.definitions[n];
             Node defNode = ast->nodeList[index];
@@ -145,11 +191,13 @@ void BuildTypeTable(AST *ast, Index rootIndex, TypeTable *globalTypeTable)
             {
                 const char* functionName = defNode.functionDef.name;
 
-                // check if this function name is already used or not
-                if(GetTypeTableIndexForId(globalTypeTable, functionName) != -1) 
+                // check if function with same name is already defined
+                int typeIndex = GetTypeTableIndexForFunctionId(typeTable, functionName); 
+
+                if(typeIndex != -1 && typeTable->types[typeIndex].isFunction)
                 {
-                    printf("[ERROR] type or function with name '%s' already defined\n", functionName);
-                    return;
+                    printf("[ERROR] function with name '%s' already defined\n", functionName);
+                    return false;
                 }
 
                 int returnTypeIndex = -1;
@@ -157,17 +205,17 @@ void BuildTypeTable(AST *ast, Index rootIndex, TypeTable *globalTypeTable)
                 if(defNode.functionDef.isReturnTypeDeclared) 
                 {
                     Node typeNode = ast->nodeList[defNode.functionDef.returnType];
-                    returnTypeIndex = GetTypeTableIndexForId(globalTypeTable, typeNode.typeAnnotation.id);
+                    returnTypeIndex = GetTypeTableIndexForId(typeTable, typeNode.typeAnnotation.id);
                 } 
                 else 
                 {
-                    returnTypeIndex = GetTypeTableIndexForId(globalTypeTable, "void");
+                    returnTypeIndex = GetTypeTableIndexForId(typeTable, "void");
                 }
 
                 if(returnTypeIndex == -1) 
                 {
                     printf("[ERROR] undefined return type declared for function: '%s'\n", functionName);
-                    return;
+                    return false;
                 }
 
                 Type type = {0};
@@ -188,15 +236,15 @@ void BuildTypeTable(AST *ast, Index rootIndex, TypeTable *globalTypeTable)
                         if(!strcmp(type.paramList.symbols[k].name, idNode.identifier.value)) 
                         {
                             printf("[ERROR] repeated declaration of argument '%s' in function '%s'\n", idNode.identifier.value, functionName);
-                            return;
+                            return false;
                         }
                     }
 
-                    int typeIndex = GetTypeTableIndexForId(globalTypeTable, typeNode.typeAnnotation.id); 
-                    if(typeIndex == -1) 
+                    int typeIndex = GetTypeTableIndexForId(typeTable, typeNode.typeAnnotation.id); 
+                    if(typeIndex == -1)
                     {
                         printf("[ERROR] undefined type '%s' for argument '%s' in function '%s'\n", typeNode.typeAnnotation.id, idNode.identifier.value, functionName);
-                        return;
+                        return false;
                     }
 
                     Parameter param = {0};
@@ -209,20 +257,23 @@ void BuildTypeTable(AST *ast, Index rootIndex, TypeTable *globalTypeTable)
                         param.arraySize = typeNode.typeAnnotation.arrayDim;
                     }
 
-                    PushSymbol(&(type.paramList), param);
+                    PushParam(&(type.paramList), param);
                 }
 
-                PushType(globalTypeTable, type);
+                PushType(typeTable, type);
             }
         }
     }
+
+    return true;
 }
 
-int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentTypeIndex)
+// TODO: improve the type error messages
+int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentFunctionTypeIndex, int parentTypeIndex, SymbolTable *localSymbolTable)
 {
-    if(ast == NULL) return -1;
+    if(ast == 0) return -1;
     if(nodeIndex >= ast->nodeCount) return -1;
-    if(typeTable == NULL) return -1;
+    if(typeTable == 0) return -1;
 
     Node node = ast->nodeList[nodeIndex];
 
@@ -232,33 +283,72 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentTy
     {
         for(int n = 0; n < node.statementList.statementCount; n++) 
         {
-            TypeCheckNode(ast, node.statementList.statements[n], typeTable, currentTypeIndex);
+            TypeCheckNode(ast, node.statementList.statements[n], typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
         }
     }
     break;
 
     case NODE_ASSIGN_STATEMENT:
     {
-        int leftTypeIndex = TypeCheckNode(ast, node.assignStmt.lValue, typeTable, currentTypeIndex);
-        int rightTypeIndex = TypeCheckNode(ast, node.assignStmt.expression, typeTable, currentTypeIndex);
+        int leftTypeIndex = TypeCheckNode(ast, node.assignStmt.lValue, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+        int rightTypeIndex = TypeCheckNode(ast, node.assignStmt.expression, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+
+        if(leftTypeIndex == -1) 
+        {
+             // type inference for variable declaration without type annotation
+            Node varDeclNode = ast->nodeList[node.assignStmt.lValue];
+            if(varDeclNode.type == NODE_VARIABLE_DECLARATION && !varDeclNode.varDecl.isTypeAnnotated) 
+            {
+                leftTypeIndex = rightTypeIndex;
+                Node idNode = ast->nodeList[varDeclNode.varDecl.id];
+                int symbolIndex = GetSymbolTableIndexForId(localSymbolTable, idNode.identifier.value);
+                Symbol *symbol = &localSymbolTable->symbols[symbolIndex];
+                symbol->typeTableIndex = rightTypeIndex;
+
+                // TODO: tranasfer the isArray value from right expression to left expression
+            }
+        }
         
         if(leftTypeIndex != rightTypeIndex) 
         {
-            printf("[TYPE ERROR]\n");
+            printf("[TYPE ERROR] assignment statment : left = '%d' and right = '%d'\n", leftTypeIndex, rightTypeIndex);
         }
+    }
+    break;
+
+    case NODE_OPERATOR:
+    {
+        int leftTypeIndex = TypeCheckNode(ast, node.operator.left, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+
+        int rightTypeIndex = -1;
+        if(node.operator.opType == BOOL_OP_NOT) 
+        {
+            rightTypeIndex = GetTypeTableIndexForId(typeTable, "bool");
+        }
+        else 
+        {
+            rightTypeIndex = TypeCheckNode(ast, node.operator.right, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+        }
+        
+        if(leftTypeIndex != rightTypeIndex) 
+        {
+            printf("[TYPE ERROR] mismatch in operator parameter types , %d != %d\n", leftTypeIndex, rightTypeIndex);
+        }
+
+        return leftTypeIndex;
     }
     break;
 
     case NODE_L_VALUE:
     {
         int prevTypeIndex = -1;
-        for(int n = 0; n < node.lValue.simpleLValueCount; n++) 
+        for(int n = 0; n < node.lValue.simpleLValueCount; n++)
         {
             if(n == 0) {
-                int typeIndex = TypeCheckNode(ast, node.lValue.simpleLValues[n], typeTable, currentTypeIndex);
+                int typeIndex = TypeCheckNode(ast, node.lValue.simpleLValues[n], typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
                 prevTypeIndex = typeIndex;
             } else {
-                int typeIndex = TypeCheckNode(ast, node.lValue.simpleLValues[n], typeTable, prevTypeIndex);
+                int typeIndex = TypeCheckNode(ast, node.lValue.simpleLValues[n], typeTable, currentFunctionTypeIndex, prevTypeIndex, localSymbolTable);
                 prevTypeIndex = typeIndex;
             }
         }
@@ -267,26 +357,153 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentTy
     }
     break;
 
+    case NODE_FUNCTION_CALL:
+    {
+        // check function name
+        int functionTypeIndex = GetTypeTableIndexForFunctionId(typeTable, node.functionCall.id);
+        if(functionTypeIndex == -1) 
+        {
+            printf("[FUNCTION CALL ERROR] reference to undefined function '%s'\n", node.functionCall.id);
+            return -1;
+        }
+
+        Type functionType = typeTable->types[functionTypeIndex];
+
+        // check argument count
+        if(functionType.paramList.count != node.functionCall.argumentCount) 
+        {
+            printf("[FUNCTION CALL ERROR] Expected '%d' parameter for function '%s', but found '%d' parameter\n", functionType.paramList.count, node.functionCall.id, node.functionCall.argumentCount);
+            return -1;
+        }
+
+        // check arguments types
+        for(int n = 0; n < node.functionCall.argumentCount; n++) 
+        {
+            int passedArguementTypeIndex = TypeCheckNode(ast, node.functionCall.arguments[n], typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+            
+            if(passedArguementTypeIndex == -1) return -1;
+
+            int requiredParamTypeIndex = functionType.paramList.symbols[n].typeTableIndex;
+
+            if(passedArguementTypeIndex != requiredParamTypeIndex) {
+                printf("[FUNCTION CALL ERROR] Type mismatch for parameter '%s' of function '%s'\n", functionType.paramList.symbols[n].name, functionType.id);
+                return -1;
+            }       
+        }
+
+        return functionType.returnTypeIndex;
+    }
+    break;
+
+    case NODE_VARIABLE_DECLARATION:
+    {
+        Node idNode = ast->nodeList[node.varDecl.id];
+
+        // check in local symbol table
+        int localSymbolTableIndex = GetSymbolTableIndexForId(localSymbolTable, idNode.identifier.value);
+
+        if(localSymbolTableIndex != -1)
+        {
+            printf("[SYMBOL ERROR] local variable with name '%s' already declared\n", idNode.identifier.value);
+            return -1;
+        }
+        
+        // check in function parameter list
+        int paramSymbolIndex = GetSymbolTableIndexForId(&typeTable->types[currentFunctionTypeIndex].paramList, idNode.identifier.value);
+    
+        if(paramSymbolIndex != -1)
+        {
+            printf("[SYMBOL ERROR] parameter with name '%s' already declared for the function, cannot decalre a local variable with same name\n", idNode.identifier.value);
+            return -1;
+        }
+
+        Symbol localSymbol = {0};
+        localSymbol.name = idNode.identifier.value;
+        localSymbol.typeTableIndex = -1;
+
+        // check if type is declared
+        if(node.varDecl.isTypeAnnotated)
+        {
+            Node typeNode = ast->nodeList[node.varDecl.type];
+
+            // search in type table
+            int typeIndex = GetTypeTableIndexForId(typeTable, typeNode.typeAnnotation.id);
+            if(typeIndex == -1)
+            {
+                printf("[TYPE ERROR] undefined type '%s' for variable: %s\n", typeNode.typeAnnotation.id, idNode.identifier.value);
+                return -1;
+            }
+            else 
+            {
+                if(typeTable->types[typeIndex].isFunction) 
+                {
+                    printf("[TYPE ERROR] cannot declare variable of type function, variable '%s' has type '%s' which is a function\n", idNode.identifier.value, typeTable->types[typeIndex].id);
+                    return -1;
+                }
+            }
+
+            localSymbol.typeTableIndex = typeIndex;
+            localSymbol.isArray = typeNode.typeAnnotation.isArrayType;
+        }
+
+        PushSymbol(localSymbolTable, localSymbol);
+
+        return localSymbol.typeTableIndex;
+    }
+    break;
+
     case NODE_IDENTIFIER:
     {
-        printf("type checking identifier: %s\n", node.identifier.value);
-        int symbolTableIndex = GetSymbolTableIndexForId(&typeTable->types[currentTypeIndex].paramList, node.identifier.value);
+        Symbol *symbol = 0;
 
-        if(symbolTableIndex == -1)
+        // if it has parent type, check if the current identifier is it's field
+        if(parentTypeIndex != -1)
         {
-            printf("[ERROR] undefined variable '%s'\n", node.identifier.value);
-            return -1;
+            int fieldIndex = GetSymbolTableIndexForId(&typeTable->types[parentTypeIndex].fieldList, node.identifier.value);
+
+            if(fieldIndex == -1)
+            {
+                printf("[ERROR] undefined field '%s'\n", node.identifier.value);
+                return -1;
+            }
+
+            symbol = &typeTable->types[parentTypeIndex].fieldList.symbols[fieldIndex];
         }
 
-        Symbol symbol = typeTable->types[currentTypeIndex].paramList.symbols[symbolTableIndex];
-
-        if(symbol.isArray) 
+        // check in local symbol table
+        if(symbol == NULL)
         {
-            printf("[ERROR] variable '%s' is of array type need to be indexed\n", node.identifier.value);
-            return -1;
+            int localSymbolTableIndex = GetSymbolTableIndexForId(localSymbolTable, node.identifier.value);
+
+            if(localSymbolTableIndex != -1)
+            {
+                symbol = &localSymbolTable->symbols[localSymbolTableIndex];
+            }
+        }
+        
+        // check in function parameter list
+        if(symbol == NULL)
+        {
+            int paramSymbolIndex = GetSymbolTableIndexForId(&typeTable->types[currentFunctionTypeIndex].paramList, node.identifier.value);
+        
+            if(paramSymbolIndex != -1)
+            {
+                symbol = &typeTable->types[currentFunctionTypeIndex].paramList.symbols[paramSymbolIndex];
+            }
+        }
+        
+        if(symbol != NULL) 
+        {
+            if(symbol->isArray)
+            {
+                printf("[ERROR] symbol '%s' is of type array, should be indexed\n", node.identifier.value);
+                return -1;
+            }
+            return symbol->typeTableIndex;
         }
 
-        return symbol.typeTableIndex;
+        printf("[ERROR] undefined variable '%s'\n", node.identifier.value);
+        return -1;
     }
     break;
 
@@ -294,33 +511,118 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentTy
     {
         Node idNode = ast->nodeList[node.arrayAccess.id];
 
-        int symbolTableIndex = GetSymbolTableIndexForId(&typeTable->types[currentTypeIndex].paramList, idNode.identifier.value);
+        Symbol *symbol = NULL;
 
-        if(symbolTableIndex == -1)
+        // if has parent type, check if the current identifier is its field
+        if(parentTypeIndex != -1)
         {
-            printf("[ERROR] undefined variable '%s'", node.identifier.value);
-            return -1;
+            int fieldIndex = GetSymbolTableIndexForId(&typeTable->types[parentTypeIndex].fieldList, idNode.identifier.value);
+            if(fieldIndex == -1)
+            {
+                printf("[ERROR] undefined field '%s'\n", idNode.identifier.value);
+                return -1;
+            }
+
+            symbol = &typeTable->types[parentTypeIndex].fieldList.symbols[fieldIndex];             
         }
 
-        Symbol symbol = typeTable->types[currentTypeIndex].paramList.symbols[symbolTableIndex];
-
-        if(!symbol.isArray)
+        // check in local symbol table
+        if(symbol == NULL)
         {
-            printf("[ERROR] variable '%s' cannot be indexed as an array\n", idNode.identifier.value);
-            return -1;
+            int localSymbolTableIndex = GetSymbolTableIndexForId(localSymbolTable, idNode.identifier.value);
+
+            if(localSymbolTableIndex != -1)
+            {
+                symbol = &localSymbolTable->symbols[localSymbolTableIndex]; 
+            }
         }
 
-        int arrayIndexExprType = TypeCheckNode(ast, node.arrayAccess.expr, typeTable, currentTypeIndex);
-
-        int intergerTypeIndex = GetTypeTableIndexForId(typeTable, "int");
-
-        if(arrayIndexExprType != intergerTypeIndex)
+        // check in function parameter list
+        if(symbol == NULL)
         {
-            printf("[ERROR] array index should be of type 'int'!\n", idNode.identifier.value);
-            return -1;
+            int paramSymbolIndex = GetSymbolTableIndexForId(&typeTable->types[currentFunctionTypeIndex].paramList, idNode.identifier.value);
+            
+            if(paramSymbolIndex != -1)
+            {            
+                symbol = &typeTable->types[currentFunctionTypeIndex].paramList.symbols[paramSymbolIndex]; 
+            }
         }
 
-        return symbol.typeTableIndex;
+        if(symbol != NULL) 
+        {
+            if(!symbol->isArray)
+            {
+                printf("[ERROR] symbol '%s' is not of type array, cannot be indexed as an array\n", idNode.identifier.value);
+                return -1;
+            }
+
+            // check array index expression type
+            int arrayIndexExprType = TypeCheckNode(ast, node.arrayAccess.expr, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+            int integerType = GetTypeTableIndexForId(typeTable, "int");
+
+            if(arrayIndexExprType != integerType) 
+            {
+                printf("[ERROR] symbol '%s': array indexing expression should be of type integer but is of type '%s'\n", idNode.identifier.value, typeTable->types[arrayIndexExprType].id);
+                return -1;
+            }
+
+            return symbol->typeTableIndex;
+        }
+
+        printf("[ERROR] undefined variable '%s'\n", idNode.identifier.value);
+        return -1;
+    }
+    break;
+
+    case NODE_IF_STATEMENT:
+    {
+        int conditionExprType = TypeCheckNode(ast, node.ifStmt.conditionExpr, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+        int boolTypeIndex = GetTypeTableIndexForId(typeTable, "bool");
+
+        if(conditionExprType != boolTypeIndex)
+        {
+            printf("[TYPE ERROR] if statement: type of conditional expression should evaluate to boolean\n");
+        }
+
+        TypeCheckNode(ast, node.ifStmt.trueBlock, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+        if(node.ifStmt.falseBlockExist)
+        {
+            TypeCheckNode(ast, node.ifStmt.falseBlock, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+        }
+    }
+    break;
+
+    case NODE_WHILE_STATEMENT:
+    {
+        int conditionExprType = TypeCheckNode(ast, node.whileStmt.conditionExpr, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+        int boolTypeIndex = GetTypeTableIndexForId(typeTable, "bool");
+
+        if(conditionExprType != boolTypeIndex)
+        {
+            printf("[TYPE ERROR] while statement: type of conditional expression should evaluate to boolean\n");
+        }
+
+        TypeCheckNode(ast, node.whileStmt.block, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+    }
+    break;
+
+    case NODE_RETURN_STATEMENT:
+    {
+        int retExprTypeIndex = -1; 
+        if(node.returnStmt.exprExist)
+        {
+            retExprTypeIndex = TypeCheckNode(ast, node.returnStmt.expression, typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+        }
+        else 
+        {
+            retExprTypeIndex = GetTypeTableIndexForId(typeTable, "void");
+        }
+
+        int definedRetExprTypeIndex = typeTable->types[currentFunctionTypeIndex].returnTypeIndex;
+        if(definedRetExprTypeIndex != retExprTypeIndex) 
+        {
+            printf("[TYPE ERROR] function defines return type as '%d', but returns expression of type '%d'\n", definedRetExprTypeIndex, retExprTypeIndex);
+        }
     }
     break;
 
@@ -336,7 +638,15 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentTy
     }
     break;
 
+    case NODE_CHARACTER_CONSTANT:
+    {
+        return GetTypeTableIndexForId(typeTable, "char");
+    }
+    break;
+
     default:
+        printf("Unsupported node for type checking: %d\n", node.type);
+        return -1;
         break;
     }
 
@@ -358,18 +668,45 @@ void TypeCheckAST(AST *ast, Index rootIndex, TypeTable *typeTable)
 
             if(defNode.type == NODE_FUNCTION_DEFINITION)
             {
-                printf("type checking function: %s\n", defNode.functionDef.name);
                 int typeIndex = GetTypeTableIndexForId(typeTable, defNode.functionDef.name);
-                TypeCheckNode(ast, defNode.functionDef.body, typeTable, typeIndex);
+                TypeCheckNode(ast, defNode.functionDef.body, typeTable, typeIndex, -1, &typeTable->types[typeIndex].localSymbolList);
             }
         }
     }
 }
 
-void PrintType(Type type)
+void PrintTypeInfo(Type type)
 {
-    printf("name: '%s', size: %u, is_struct: %d, is_function: %d", type.id, type.size, type.isStruct, type.isFunction);
-    printf("\n");
+    printf("name: '%s', size: %u, is_struct: %d, is_function: %d, return type: %d\n", type.id, type.size, type.isStruct, type.isFunction, type.returnTypeIndex);
+    if (type.isStruct)
+    {
+        for(int n = 0; n < type.fieldList.count; n++)
+        {
+            printf("    %d. field_name: '%s', type_index : %d, is_array: %d, array_size: %d\n", n + 1, 
+                                type.fieldList.symbols[n].name, 
+                                type.fieldList.symbols[n].typeTableIndex,
+                                type.fieldList.symbols[n].isArray,
+                                type.fieldList.symbols[n].arraySize);
+        }
+    } else if(type.isFunction) {
+        for(int n = 0; n < type.paramList.count; n++)
+        {
+            printf("    - param_name: '%s', type_index : %d, is_array: %d, array_size: %d\n", 
+                                type.paramList.symbols[n].name, 
+                                type.paramList.symbols[n].typeTableIndex,
+                                type.paramList.symbols[n].isArray,
+                                type.paramList.symbols[n].arraySize);
+        }
+
+        for(int n = 0; n < type.localSymbolList.count; n++)
+        {
+            printf("    - local_symbol_name: '%s', type_index : %d, is_array: %d, array_size: %d\n", 
+                                type.localSymbolList.symbols[n].name, 
+                                type.localSymbolList.symbols[n].typeTableIndex,
+                                type.localSymbolList.symbols[n].isArray,
+                                type.localSymbolList.symbols[n].arraySize);
+        }
+    }
 }
 
 void PrintTypeTable(TypeTable typeTable)
@@ -379,7 +716,7 @@ void PrintTypeTable(TypeTable typeTable)
     for(int n = 0; n < typeTable.count; n++) 
     {
         printf("[%d] ", n);
-        PrintType(typeTable.types[n]);
+        PrintTypeInfo(typeTable.types[n]);
     }
 
     printf("\n");

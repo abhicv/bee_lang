@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "file.h"
+
 enum TokenType
 {
     // constants
@@ -64,17 +66,6 @@ enum TokenType
     TOKEN_PROGRAM_END
 };
 
-typedef struct String {
-    char *data;
-    unsigned int length;    
-} String;
-
-typedef struct LoadedFile {
-    String source;
-    String path;
-    bool isLoaded;
-} LoadedFile;
-
 typedef struct {
     char *keywordString;
     unsigned int len;
@@ -109,7 +100,5 @@ typedef struct {
     unsigned int column;
     LoadedFile loadedFile;
 } Lexer;
-
-void PrintErrorLocationInSource(LoadedFile loadedFile, unsigned int location, unsigned int lineNumber, unsigned int column, char *errorMsg);
 
 #endif

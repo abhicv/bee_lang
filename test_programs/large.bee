@@ -1,3 +1,21 @@
+struct Token {
+    type: int;
+    integerValue: int;
+    characterValue: int;
+    identifier: int;
+    stringValue: int;
+    size: int;
+    pos: int;
+    column: int;
+    line: int;
+}
+
+struct Parser {
+
+}
+
+struct TokenType {}
+
 fn GetNextToken(parser: Parser) : Token {
     return tokens[tokenIndex + 1];
 }

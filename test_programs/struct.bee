@@ -1,3 +1,8 @@
+struct A {
+    x : int;
+    b : [] B;
+}
+
 struct C {
     x : int;
 }
@@ -5,11 +10,7 @@ struct C {
 struct B {
     x : int;
     c : [] C;
-}
-
-struct A {
-    x : int;
-    b : [] B;
+    b: B;
 }
 
 fn compute_sum(x: int, a: A): int { 
@@ -18,5 +19,3 @@ fn compute_sum(x: int, a: A): int {
     a.b[x].x = 0;
     a.b[0].c[0].x = 10;
 }
-
-

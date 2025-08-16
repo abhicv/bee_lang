@@ -11,7 +11,7 @@ fn main() : int {
     result = (x + y) * 10;
 }
 
-//let callback: (int, int) : int
+// let callback: (int, int) : int
 
 fn parse_string_literal(lexer: Lexer) {
     // let num = callback(10, 30);

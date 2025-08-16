@@ -1,12 +1,16 @@
 #include "parser.h"
+#include "error.h"
+#include "assert.h"
 
 Token GetNextToken(Parser *parser)
 {
+    assert(parser->tokenIndex < parser->tokenList.count);
     return parser->tokenList.tokens[parser->tokenIndex++];
 }
 
 Token PeekNextToken(Parser *parser)
 {
+    assert(parser->tokenIndex < parser->tokenList.count);
     return parser->tokenList.tokens[parser->tokenIndex];
 }
 
@@ -38,12 +42,33 @@ Token ExpectToken(Parser *parser, unsigned int tokenType)
         errorMsg[count] = 0;
         PrintErrorLocationInSource(parser->loadedFile, token.pos, token.line + 1, token.column + 1, errorMsg);
 
-        // GetNextToken(parser);
         Token dummy = {0};
         token.type = tokenType;
         token.identifier = "this_is_a_dummy";
         return token;
     }
+}
+
+Position GetStartPositionOfTokenAtIndex(Parser *parser, int index) {
+    assert(index < parser->tokenList.count);
+    assert(index > -1);
+    Token token = parser->tokenList.tokens[index];
+    Position pos = {0};
+    pos.lineNumber = token.line;
+    pos.column = token.column;
+    pos.index = token.pos;
+    return pos;
+}
+
+Position GetLastPositionOfTokenAtIndex(Parser *parser, int index) {
+    assert(index < parser->tokenList.count);
+    assert(index > -1);
+    Token token = parser->tokenList.tokens[index];
+    Position pos = {0};
+    pos.lineNumber = token.line;
+    pos.column = token.column + token.size - 1;
+    pos.index = token.pos + token.size - 1;
+    return pos;
 }
 
 enum OperatorAssociativity {
@@ -133,6 +158,8 @@ Index ParseLValue(AST *ast, Parser *parser);
 // precedence climbing - https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 Index ParseExpression(AST *ast, Parser *parser, int minPrec)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     Index left = ParseAtom(ast, parser);
     
     while(true)
@@ -162,12 +189,20 @@ Index ParseExpression(AST *ast, Parser *parser, int minPrec)
         
         left = PushNode(ast, node);
     }
-    
+
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+    Location location = {.start = start, .end = end};
+
+    ast->nodeList[left].location = location;
+
     return left;
 }
 
 Index ParseFunctionCall(AST *ast, Parser *parser) 
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex - 2);
+
     Node node = {0};
     node.type = NODE_FUNCTION_CALL;
     node.functionCall.id = parser->tokenList.tokens[parser->tokenIndex - 2].identifier;
@@ -185,9 +220,15 @@ Index ParseFunctionCall(AST *ast, Parser *parser)
         Index argIndex = ParseExpression(ast, parser, 1);
         PushIndex(&node.functionCall.arguments, &node.functionCall.argumentCount, argIndex);
     }
-    
+
     ExpectToken(parser, TOKEN_RIGHT_PAREN);
-    
+
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+    Location location = {.start = start, .end = end};
+
+    node.location = location;
+
     return PushNode(ast, node);
 }
 
@@ -207,45 +248,94 @@ Index ParseAtom(AST *ast, Parser *parser)
     }
     else if(AcceptToken(parser, TOKEN_NOT))
     {
+        Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
         Node node = {0};
         node.type = NODE_OPERATOR;
         node.operator.opType = BOOL_OP_NOT;
         node.operator.left = ParseAtom(ast, parser);
+
+        Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+        Location location = {.start = start, .end = end};
+
+        node.location = location;
+
         return PushNode(ast, node);
     }
     else if(AcceptToken(parser, TOKEN_INTEGER_CONSTANT))
     {
+        Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
         Node node = {0};
         node.type = NODE_INTEGER_CONSTANT;
         node.integer.value = parser->tokenList.tokens[parser->tokenIndex - 1].integerValue;
+
+        Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+        Location location = {.start = start, .end = end};
+        node.location = location;
+
         return PushNode(ast, node);
     }
     else if(AcceptToken(parser, TOKEN_CHAR_CONSTANT))
     {
+        Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
         Node node = {0};
         node.type = NODE_CHARACTER_CONSTANT;
         node.character.value = parser->tokenList.tokens[parser->tokenIndex - 1].characterValue;
+
+        Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+        Location location = {.start = start, .end = end};
+        node.location = location;
+
         return PushNode(ast, node);
     }
     else if(AcceptToken(parser, TOKEN_STRING_CONSTANT))
     {
+        Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
         Node node = {0};
         node.type = NODE_STRING_CONSTANT;
         node.string.value = parser->tokenList.tokens[parser->tokenIndex - 1].stringValue;
+
+        Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+        Location location = {.start = start, .end = end};
+        node.location = location;
+
         return PushNode(ast, node);
     }
     else if(AcceptToken(parser, TOKEN_KEYWORD_TRUE))
     {
+        Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
         Node node = {0};
         node.type = NODE_BOOLEAN_CONSTANT;
         node.boolean.isTrue = true;
+
+        Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+        Location location = {.start = start, .end = end};
+        node.location = location;        
+
         return PushNode(ast, node);
     }
     else if(AcceptToken(parser, TOKEN_KEYWORD_FALSE))
     {
+        Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
         Node node = {0};
         node.type = NODE_BOOLEAN_CONSTANT;
         node.boolean.isTrue = false;
+
+        Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+        Location location = {.start = start, .end = end};
+        node.location = location;
+
         return PushNode(ast, node);
     }
     else if(AcceptToken(parser, TOKEN_LEFT_PAREN))
@@ -255,7 +345,7 @@ Index ParseAtom(AST *ast, Parser *parser)
         return index;
     }
     
-    // an atom is always required
+    // NOTE: an atom is always required
     Token next = PeekNextToken(parser);
 
     char errorMsg[500] = {0};
@@ -266,6 +356,8 @@ Index ParseAtom(AST *ast, Parser *parser)
 
 Index ParseArrayAccess(AST *ast, Parser *parser) 
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     Token id = ExpectToken(parser, TOKEN_IDENTIFIER);
 
     ExpectToken(parser, TOKEN_LEFT_BRACKET);
@@ -283,6 +375,11 @@ Index ParseArrayAccess(AST *ast, Parser *parser)
     node.arrayAccess.id = PushNode(ast, idNode);
     node.arrayAccess.expr = expr;
 
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+    Location location = {.start = start, .end = end};
+    node.location = location;
+
     return PushNode(ast, node);
 }
 
@@ -298,15 +395,25 @@ Index ParseSimpleLValue(AST *ast, Parser *parser)
     } 
     else 
     {
+        Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
         Node idNode = {0};
         idNode.type = NODE_IDENTIFIER;
         idNode.identifier.value = id.identifier;
+
+        Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+    
+        Location location = {.start = start, .end = end};
+        idNode.location = location;
+
         return PushNode(ast, idNode);
     }
 }
 
 Index ParseLValue(AST *ast, Parser *parser)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     Node node = {0};
     node.type = NODE_L_VALUE;
 
@@ -319,11 +426,18 @@ Index ParseLValue(AST *ast, Parser *parser)
         else break;
     }
 
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+    Location location = {.start = start, .end = end};
+    node.location = location;
+
     return PushNode(ast, node);
 }
 
 Index ParseAssignmentStatement(AST *ast, Parser *parser)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     Index lvalueIndex = ParseLValue(ast, parser);
     ExpectToken(parser, TOKEN_EQUAL);
     Index exprIndex = ParseExpression(ast, parser, 1);
@@ -334,12 +448,19 @@ Index ParseAssignmentStatement(AST *ast, Parser *parser)
     node.type = NODE_ASSIGN_STATEMENT;
     node.assignStmt.lValue = lvalueIndex;
     node.assignStmt.expression = exprIndex;
-    
+
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+    Location location = {.start = start, .end = end};
+    node.location = location;
+
     return PushNode(ast, node);
 }
 
 Index ParseType(AST *ast, Parser *parser)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     Node node = {0};
     node.type = NODE_TYPE_ANNOTATION;
     node.typeAnnotation.isArrayType = false;
@@ -380,12 +501,19 @@ Index ParseType(AST *ast, Parser *parser)
         PrintErrorLocationInSource(parser->loadedFile, next.pos, next.line + 1, next.column + 1, errorMsg);
         exit(1);
     }
-    
+
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+
+    Location location = {.start = start, .end = end};
+    node.location = location;
+
     return PushNode(ast, node);
 }
 
 Index ParseVarDeclStatement(AST *ast, Parser *parser)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     Node node = {0};
     node.type = NODE_VARIABLE_DECLARATION;
     node.varDecl.isTypeAnnotated = false;
@@ -400,7 +528,7 @@ Index ParseVarDeclStatement(AST *ast, Parser *parser)
 
     node.varDecl.id = PushNode(ast, idNode);
 
-    // NOTE: type annotation for variable declaration is optional
+    // type annotation for variable declaration is optional
     if(AcceptToken(parser, TOKEN_COLON)) {
         node.varDecl.type = ParseType(ast, parser);
         node.varDecl.isTypeAnnotated = true;
@@ -422,16 +550,27 @@ Index ParseVarDeclStatement(AST *ast, Parser *parser)
         assignNode.type = NODE_ASSIGN_STATEMENT;
         assignNode.assignStmt.lValue = left;
         assignNode.assignStmt.expression = right;
+
+        Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+        Location location = {.start = start, .end = end};
+        assignNode.location = location;
+        
         return PushNode(ast, assignNode);        
     }
     
     ExpectToken(parser, TOKEN_SEMICOLON);
-    
+
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+    Location location = {.start = start, .end = end};
+    node.location = location;
+
     return PushNode(ast, node);
 }
 
 Index ParseIfStatement(AST *ast, Parser *parser)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     ExpectToken(parser, TOKEN_KEYWORD_IF);
     
     Index exprIndex = ParseExpression(ast, parser, 1);
@@ -450,19 +589,24 @@ Index ParseIfStatement(AST *ast, Parser *parser)
             node.ifStmt.falseBlockExist = true;
             parser->tokenIndex -= 1;
             node.ifStmt.falseBlock = ParseIfStatement(ast, parser);
-        }             
+        }
         else
         {            
             node.ifStmt.falseBlock = ParseStatementList(ast, parser);
             node.ifStmt.falseBlockExist = true;    
         }
     }
-    
+
+    Position end = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+    Location location = {.start = start, .end = end};
+    node.location = location;
     return PushNode(ast, node);
 }
 
 Index ParseWhileStatement(AST *ast, Parser *parser)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     ExpectToken(parser, TOKEN_KEYWORD_WHILE);
     
     Node node = {0};
@@ -470,12 +614,18 @@ Index ParseWhileStatement(AST *ast, Parser *parser)
     node.whileStmt.conditionExpr = ParseExpression(ast, parser, 1);
         
     node.whileStmt.block = ParseStatementList(ast, parser);
+
+    Position end = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+    Location location = {.start = start, .end = end};
+    node.location = location;
     
     return PushNode(ast, node);
 }
 
 Index ParseReturnStatement(AST *ast, Parser *parser)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     ExpectToken(parser, TOKEN_KEYWORD_RETURN);
     
     Node node = {0};
@@ -493,7 +643,12 @@ Index ParseReturnStatement(AST *ast, Parser *parser)
     node.returnStmt.expression = ParseExpression(ast, parser, 1);
     
     ExpectToken(parser, TOKEN_SEMICOLON);
+
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
     
+    Location location = {.start = start, .end = end};
+    node.location = location;
+
     return PushNode(ast, node);
 }
 
@@ -515,12 +670,9 @@ Index ParseStatement(AST *ast, Parser *parser)
         while(true) 
         {
             Token token = GetNextToken(parser);
-
             if(token.type == TOKEN_EQUAL) {
                 equalTokenFound = true;
-            } else if(token.type == TOKEN_SEMICOLON) {
-                break;
-            } else if(token.type == TOKEN_PROGRAM_END) {
+            } else if(token.type == TOKEN_SEMICOLON || token.type == TOKEN_PROGRAM_END) {
                 break;
             }
         }
@@ -557,6 +709,8 @@ Index ParseStatement(AST *ast, Parser *parser)
 
 Index ParseStatementList(AST *ast, Parser *parser) 
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     ExpectToken(parser, TOKEN_LEFT_BRACE);
     
     Node node = {0};
@@ -574,12 +728,19 @@ Index ParseStatementList(AST *ast, Parser *parser)
     }
     
     ExpectToken(parser, TOKEN_RIGHT_BRACE);
+
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
     
+    Location location = {.start = start, .end = end};
+    node.location = location;
+
     return PushNode(ast, node);
 }
 
 Index ParseFunction(AST *ast, Parser *parser)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     ExpectToken(parser, TOKEN_KEYWORD_FN);
     
     Token funcId = ExpectToken(parser, TOKEN_IDENTIFIER);
@@ -604,6 +765,8 @@ Index ParseFunction(AST *ast, Parser *parser)
         
         if(node.functionDef.parameterCount > 0) ExpectToken(parser, TOKEN_COMMA);
         
+        Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
         Token paramId = ExpectToken(parser, TOKEN_IDENTIFIER);
         
         Node idNode = {0};
@@ -619,6 +782,11 @@ Index ParseFunction(AST *ast, Parser *parser)
         paramNode.param.id = PushNode(ast, idNode);
         paramNode.param.type = typeAnnoIndex;
         
+        Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+    
+        Location location = {.start = start, .end = end};
+        paramNode.location = location;
+
         Index index = PushNode(ast, paramNode);
         PushIndex(&node.functionDef.parameters, &node.functionDef.parameterCount, index);
     }
@@ -629,17 +797,24 @@ Index ParseFunction(AST *ast, Parser *parser)
     if(AcceptToken(parser, TOKEN_COLON))
     {
         node.functionDef.returnType = ParseType(ast, parser);
-        node.functionDef.isReturnTypeDeclared = false;
+        node.functionDef.isReturnTypeDeclared = true;
     }
     
     // body    
     node.functionDef.body = ParseStatementList(ast, parser);
     
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+    
+    Location location = {.start = start, .end = end};
+    node.location = location;
+
     return PushNode(ast, node);
 }
 
 Index ParseStruct(AST *ast, Parser *parser)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     ExpectToken(parser, TOKEN_KEYWORD_STRUCT);
     
     Token structId = ExpectToken(parser, TOKEN_IDENTIFIER);
@@ -658,6 +833,8 @@ Index ParseStruct(AST *ast, Parser *parser)
         if(token.type == TOKEN_RIGHT_BRACE) break;
         else if(token.type == TOKEN_PROGRAM_END) break;
         
+        Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
         Token fieldId = ExpectToken(parser, TOKEN_IDENTIFIER);
         
         Node idNode = {0};
@@ -675,18 +852,30 @@ Index ParseStruct(AST *ast, Parser *parser)
         fieldNode.field.id = PushNode(ast, idNode);
         fieldNode.field.type = typeAnnoIndex;
         
+        Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+    
+        Location location = {.start = start, .end = end};
+        fieldNode.location = location;
+
         Index fieldIndex = PushNode(ast, fieldNode);
         
         PushIndex(&node.structDef.fields, &node.structDef.fieldCount, fieldIndex);
     }
     
     ExpectToken(parser, TOKEN_RIGHT_BRACE);
+
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+    
+    Location location = {.start = start, .end = end};
+    node.location = location;
     
     return PushNode(ast, node);
 }
 
 Index ParseProgram(AST *ast, Parser *parser)
 {
+    Position start = GetStartPositionOfTokenAtIndex(parser, parser->tokenIndex);
+
     Node node = {0};
     node.type = NODE_PROGRAM;
     node.program.definitions = 0;
@@ -710,10 +899,15 @@ Index ParseProgram(AST *ast, Parser *parser)
         }
         else
         {
-            // TODO: dont eat the token, throw an error like unepxected keyword 
+            // TODO: don't eat the token, throw an error like unexpected keyword 
             GetNextToken(parser);
         }
     }
     
+    Position end = GetLastPositionOfTokenAtIndex(parser, parser->tokenIndex - 1);
+    
+    Location location = {.start = start, .end = end};
+    node.location = location;
+
     return PushNode(ast, node);
 }

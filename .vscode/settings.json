@@ -5,6 +5,9 @@
         "string.h": "c",
         "stdbool.h": "c",
         "ast.h": "c",
-        "lexer.h": "c"
+        "lexer.h": "c",
+        "stdio.h": "c",
+        "assert.h": "c",
+        "corecrt.h": "c"
     }
 }

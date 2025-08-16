@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "parser.h"
+#include "error.h"
 
 enum NodeType
 {
@@ -61,9 +62,12 @@ enum OperatorType
 typedef int Index;
 
 typedef struct {
+
     unsigned int type;
     unsigned int typeTableIndex;
-    
+
+    Location location;
+        
     union
     {
         struct

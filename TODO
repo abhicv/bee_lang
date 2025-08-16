@@ -10,3 +10,24 @@
 # Populate the global type table with user defined type (structs)
 # Also need a global function table
 # Walk the AST and do type checking and annotate the nodes with type info
+
+DESIGN
+array : [array_size] type_name
+    - pointer 8 bytes (64 bit)
+    - size 8 bytes
+
+slice = [] type_name
+    - pointer 
+    - size
+
+let array: [10] int;
+let x = array[3..5];
+let y = array[..] // full slice
+
+let a: &mut [] int  = &mut array;
+
+array.count
+
+for item in array {
+
+}

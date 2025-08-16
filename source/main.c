@@ -1,21 +1,19 @@
+#include "file.c"
+#include "error.c"
 #include "lexer.c"
-#include "parser.c"
 #include "ast.c"
+#include "parser.c"
 #include "symbol.c"
 
 int main(int argc, char *argv[])
 {
     TypeTable globalTypeTable = {0};
-    SymbolTable globalSymbolTable = {0};
-
-    Type integerType = {.id = "int", .size = 1};
-    Type voidType = {.id = "void", .size = 1};
-    Type boolType = {.id = "bool", .size = 1};
 
     // push primitve type to global type table
-    PushType(&globalTypeTable, integerType);
-    PushType(&globalTypeTable, voidType);
-    PushType(&globalTypeTable, boolType);
+    PushType(&globalTypeTable, (Type){.id = "void", .size = 1});
+    PushType(&globalTypeTable, (Type){.id = "char", .size = 1});
+    PushType(&globalTypeTable, (Type){.id = "bool", .size = 1});
+    PushType(&globalTypeTable, (Type){.id = "int", .size = 1});
 
     AST ast = {0};
     InitAST(&ast);
@@ -39,12 +37,17 @@ int main(int argc, char *argv[])
             // }
             
             Index rootIndex = ParseProgram(&ast, &parser);
-            PrintNode(ast, rootIndex, 0);
+            ast.parser = parser;
 
-            // BuildTypeTable(&ast, rootIndex, &globalTypeTable);
-            // PrintTypeTable(globalTypeTable);
+            // PrintNode(ast, rootIndex, 0);
+            // WriteAsDotFile(ast, rootIndex, "ast.dot");
 
-            // TypeCheckAST(&ast, rootIndex, &globalTypeTable);
+            bool isSuccess = BuildTypeTable(&ast, rootIndex, &globalTypeTable);
+
+            // if(isSuccess) {
+            //     TypeCheckAST(&ast, rootIndex, &globalTypeTable);
+            //     PrintTypeTable(globalTypeTable);
+            // }
 
             free(loadedFile.source.data);
             free(loadedFile.path.data);
@@ -52,7 +55,7 @@ int main(int argc, char *argv[])
     }
     else
     {        
-        printf("no input source file provided\n");
+        printf("error: no input source file provided\n");
     }
     
     return 0;

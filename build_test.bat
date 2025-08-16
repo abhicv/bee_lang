@@ -6,5 +6,3 @@ if exist lexer_test.exe del lexer_test.exe
 cl /nologo /Zi ..\test\lexer_test.c /link /incremental:no /subsystem:console
 if exist lexer_test.exe lexer_test.exe
 popd bin
-
-

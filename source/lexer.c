@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "ast.h"
+#include "error.h"
 
 Keyword keywordList[] = {
     {.keywordString = "fn", .len = 2, .tokenType = TOKEN_KEYWORD_FN},
@@ -21,45 +22,6 @@ char GetNextCharacter(Lexer *lexer)
 char PeekNextCharacter(Lexer *lexer)
 {
     return lexer->source[lexer->pos];
-}
-
-LoadedFile LoadFileNullTerminated(const char *fileName)
-{
-    LoadedFile loadedFile = {0};
-    loadedFile.isLoaded = false;
-
-    String path = {0};
-    path.length = strlen(fileName);
-    path.data = (char*)malloc(path.length + 1);
-    strncpy(path.data, fileName, path.length);
-    path.data[path.length] = 0;
-
-    loadedFile.path = path;
-
-    FILE *file = fopen(fileName, "r");
-    if(file)
-    {
-        fseek(file, 0, SEEK_END);
-        unsigned int size = ftell(file);
-        fseek(file, 0, SEEK_SET);
-
-        String source = {0};
-        source.data = (char*)malloc(size + 1);
-        fread(source.data, sizeof(char), size, file);
-        source.data[size] = 0;
-        source.length = size;
-        
-        fclose(file);
-
-        loadedFile.source = source;
-        loadedFile.isLoaded = true;
-    }
-    else
-    {
-        printf("error: failed to open input file '%s'\n", fileName);
-    }
-    
-    return loadedFile;
 }
 
 bool IsNumeralCharacter(char c)
@@ -90,51 +52,6 @@ bool IsVisibleCharacter(char c)
 bool IsWhiteSpaceCharacter(char c)
 {
     return (c == '\n') || (c == '\r') || (c == '\t') || (c == ' ');
-}
-
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
-
-void PrintErrorLocationInSource(LoadedFile loadedFile, unsigned int location, unsigned int lineNumber, unsigned int column, char *errorMsg)
-{
-    printf("%s:%u:%u: error: %s\n", loadedFile.path.data, lineNumber, column, errorMsg);
-
-    if (location >= loadedFile.source.length) return;
-
-    char *source = loadedFile.source.data;
-
-    int leftPos = location;
-    int rightPos = location;
-
-    while(source[leftPos] != '\n' && leftPos >= 0) leftPos--;
-    while(source[rightPos] != '\n' && rightPos < loadedFile.source.length) rightPos++;
-
-    leftPos++;
-    rightPos--;
-
-    // printf("location: %d, left: %d, right: %d\n", location, leftPos, rightPos);
-    // printf("location: '%c'(%d), left: '%c'(%d), right: '%c'(%d)\n", source[location], source[location], source[leftPos], source[leftPos], source[rightPos], source[rightPos]);
-    // printf("line size: %u\n", rightPos - leftPos + 1);
-
-    int lineSize = rightPos - leftPos + 1;
-    char *line = (char*)malloc(lineSize + 1);
-    strncpy(line, source + leftPos, lineSize);
-    line[lineSize] = 0;
-
-    printf("\t | %s\n", line);
-    printf("\t | ");
-    for(int n = 0; n < location - leftPos; n++) printf(" ");
-    printf(ANSI_COLOR_RED);
-    printf("^");
-    for(int n = 0; n < rightPos - location; n++) printf("-");
-    printf(ANSI_COLOR_RESET);
-    printf("\n");
-    free(line);
 }
 
 Token TokenizeIntegerConstant(Lexer *lexer)

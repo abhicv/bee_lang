@@ -9,28 +9,43 @@ struct String {
 }
 
 fn vector2_add(a: vector2, b: vector2) : vector2 {
-    let result: vector2 = 0;
+    let result: vector2;
     result.x = a.x + b.x; 
     result.y = a.y + b.y;
     return result;
 }
 
-fn scale_vector(v: vector2) {
-
+fn scale_vector(v: vector2, scale: int) : vector2 {
+    let result: vector2;
+    result.x = v.x * scale;
+    result.y = v.y * scale;
+    return result;
 }
 
 fn main (arg_count: int, args: [] String) : int {
-    let msg: String = "dsdadas";
-
+    
+    let msg: String;
     msg.data[10] = 'A';
 
-    if is_playable {
+    let a = 10;
+    
+    let indicies: [10] int;
+    indicies[0] = 10;
 
+    let is_playable = false;
+
+    if is_playable {
+        let a = 10;
     }
 
-    let game_over: bool = false;
+    let game_over = false;
     
     while !game_over {
+        is_playable;
         update_and_render_frame();
     }
+
+    vector2_add(a, b);
+
+    return 10;
 }
