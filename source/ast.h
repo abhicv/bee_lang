@@ -63,7 +63,7 @@ typedef int Index;
 
 typedef struct {
 
-    unsigned int type;
+    enum NodeType type;
     unsigned int typeTableIndex;
 
     Location location;
@@ -108,7 +108,7 @@ typedef struct {
 
         struct 
         {
-            unsigned int opType;
+            enum OperatorType opType;
             Index left;
             Index right;
         } operator;

@@ -223,6 +223,7 @@ bool BuildTypeTable(AST *ast, Index rootIndex, TypeTable *typeTable)
                 type.isFunction = true;
                 type.returnTypeIndex = returnTypeIndex;
                 type.size = 0;
+                type.astIndex = index;
 
                 for(int i = 0; i < defNode.functionDef.parameterCount; i++)
                 {
@@ -335,6 +336,10 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentFu
             printf("[TYPE ERROR] mismatch in operator parameter types , %d != %d\n", leftTypeIndex, rightTypeIndex);
         }
 
+        if (leftTypeIndex != GetTypeTableIndexForId(typeTable, "int")) {
+            printf("[TYPE ERROR] operator can only operate on int type\n");
+        }
+
         return leftTypeIndex;
     }
     break;
@@ -359,6 +364,47 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentFu
 
     case NODE_FUNCTION_CALL:
     {
+        // check for implicit function
+        if(!strcmp("make", node.functionCall.id)) {
+            if (node.functionCall.argumentCount > 0 && node.functionCall.argumentCount <= 2) {
+
+                Node lValue = ast->nodeList[node.functionCall.arguments[0]];
+                if (lValue.type != NODE_L_VALUE || lValue.lValue.simpleLValueCount > 1) {
+                    printf("[FUNCTION CALL ERROR] expected type name as argument for make funciton\n");
+                    return -1;
+                }
+                
+                Node id = ast->nodeList[lValue.lValue.simpleLValues[0]];
+
+                if(id.type != NODE_IDENTIFIER) {
+                    printf("[FUNCTION CALL ERROR] expected type name as argument for make funciton\n");
+                    return -1;
+                }
+
+                int typeIndex = GetTypeTableIndexForId(typeTable, id.identifier.value);
+                if (typeIndex == -1) {
+                    printf("[FUNCTION CALL ERROR] undefined type '%s' passed to make function\n", id.identifier.value);
+                    return -1; 
+                }
+
+                if (node.functionCall.argumentCount == 2) {
+                    int sizeSymbolTypeIndex = TypeCheckNode(ast, node.functionCall.arguments[1], typeTable, currentFunctionTypeIndex, parentTypeIndex, localSymbolTable);
+                    if (sizeSymbolTypeIndex != GetTypeTableIndexForId(typeTable, "int")) {
+                        printf("[FUNCTION CALL ERROR] make function expects size to be of type 'int' but found '%d'\n", sizeSymbolTypeIndex);
+                        return -1;
+                    }
+                }
+
+                return typeIndex;
+
+            } else {
+                printf("[FUNCTION CALL ERROR] Expected max 2 parameters for function '%s', but found '%d' parameter\n", node.functionCall.id, node.functionCall.argumentCount);
+                return -1;
+            }
+        } else if (!strcmp("print", node.functionCall.id)) {
+            return -1;
+        }
+
         // check function name
         int functionTypeIndex = GetTypeTableIndexForFunctionId(typeTable, node.functionCall.id);
         if(functionTypeIndex == -1) 
@@ -368,7 +414,7 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentFu
         }
 
         Type functionType = typeTable->types[functionTypeIndex];
-
+        
         // check argument count
         if(functionType.paramList.count != node.functionCall.argumentCount) 
         {
@@ -494,11 +540,6 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentFu
         
         if(symbol != NULL) 
         {
-            if(symbol->isArray)
-            {
-                printf("[ERROR] symbol '%s' is of type array, should be indexed\n", node.identifier.value);
-                return -1;
-            }
             return symbol->typeTableIndex;
         }
 
@@ -641,6 +682,12 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentFu
     case NODE_CHARACTER_CONSTANT:
     {
         return GetTypeTableIndexForId(typeTable, "char");
+    }
+    break;
+
+    case NODE_STRING_CONSTANT:
+    {
+        return GetTypeTableIndexForId(typeTable, "string");
     }
     break;
 

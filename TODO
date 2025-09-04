@@ -26,8 +26,38 @@ let y = array[..] // full slice
 
 let a: &mut [] int  = &mut array;
 
-array.count
-
 for item in array {
 
 }
+
+# Known Issues
+
+- allows variable declaration without type annotaion without an initializer;
+
+
+# Stack VM
+
+CallStack
+start
+size
+return address
+
+Stack Frame
+
+parameters
+locals
+return value
+
+
+ADD:
+    LOAD 0
+    LOAD 1
+    ADD
+    RET
+
+MAIN:
+    PUSH 20
+    PUSH 30
+    CALL ADD
+
+

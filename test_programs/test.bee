@@ -1,0 +1,15 @@
+struct Point2d {
+    x: int;
+    y: int;
+    z: int;
+}
+
+fn main() {
+    let a: int = 10 + 200;
+    let b = 10 - 5;
+    let c = 10 * 5;
+    let d = 10 / 2;
+    let e = 7 % 4;
+    a = 100;
+    print(a, b, c, d, e);
+}

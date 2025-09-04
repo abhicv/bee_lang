@@ -4,6 +4,8 @@
 #include "ast.c"
 #include "parser.c"
 #include "symbol.c"
+#include "interpreter.c"
+#include "code_gen.c"
 
 int main(int argc, char *argv[])
 {
@@ -14,7 +16,8 @@ int main(int argc, char *argv[])
     PushType(&globalTypeTable, (Type){.id = "char", .size = 1});
     PushType(&globalTypeTable, (Type){.id = "bool", .size = 1});
     PushType(&globalTypeTable, (Type){.id = "int", .size = 1});
-
+    PushType(&globalTypeTable, (Type){.id = "string", .size = 1});
+    
     AST ast = {0};
     InitAST(&ast);
 
@@ -40,14 +43,21 @@ int main(int argc, char *argv[])
             ast.parser = parser;
 
             // PrintNode(ast, rootIndex, 0);
-            // WriteAsDotFile(ast, rootIndex, "ast.dot");
+            WriteAsDotFile(ast, rootIndex, "ast.dot");
 
             bool isSuccess = BuildTypeTable(&ast, rootIndex, &globalTypeTable);
 
-            // if(isSuccess) {
-            //     TypeCheckAST(&ast, rootIndex, &globalTypeTable);
-            //     PrintTypeTable(globalTypeTable);
-            // }
+            if(isSuccess) {
+                TypeCheckAST(&ast, rootIndex, &globalTypeTable);
+                // PrintTypeTable(globalTypeTable);
+            }
+
+            // InterpretAST(ast, globalTypeTable);
+
+            GenerateCode(ast, rootIndex, globalTypeTable, -1, false);
+            PrintInstruction(stdout, instructions, instrCount, true);
+
+            // StackVM vm = InitVM();
 
             free(loadedFile.source.data);
             free(loadedFile.path.data);
