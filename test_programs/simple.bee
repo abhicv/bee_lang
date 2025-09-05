@@ -1,8 +1,25 @@
 fn main() : int {
-    let a = 10 + 2;
-    let b = 10 - 2;
-    let c = 10 * 2;
-    let d = 10 / 2;
-    b = true && false;
-    return (20 * 0 + 1);
+
+    let a = 0;
+
+    // let a = 10 == 2;
+    // let b = 10 != 2;
+    // let c = 10 > 2;
+    // let d = 10 < 2;
+    // let e = 10 <= 2;
+    // let f = 10 >= 2;
+
+    // if (a > 0) {
+    //     return 100;
+    // } else if (a < 10) {
+    //     return 200;
+    // } else {
+    //     return 300;
+    // }
+
+    while (a < 10) {
+        a = a + 1;
+    }
+
+    return 10;
 }

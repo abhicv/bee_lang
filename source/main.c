@@ -57,7 +57,29 @@ int main(int argc, char *argv[])
             GenerateCode(ast, rootIndex, globalTypeTable, -1, false);
             PrintInstruction(stdout, instructions, instrCount, true);
 
-            // StackVM vm = InitVM();
+            Function functons[] = {
+                {
+                    .localsCount = 1,
+                    .paramsCount = 0,
+                    .startAddress = 0,
+                }
+            };
+
+            FunctionTable functionTable = {0};
+            functionTable.functions = functons;
+            functionTable.count = sizeof(functons) / sizeof(functons[0]);
+
+            StackFrame frame = {
+                .returnAddr = -1,
+                .start = 0,
+            };
+
+            StackVM vm = InitVM();
+            vm.framePointer = 1;
+            vm.frames[1] = frame;
+            vm.stackPointer = 0;
+            
+            execute(vm, instructions, instrCount, functionTable);
 
             free(loadedFile.source.data);
             free(loadedFile.path.data);

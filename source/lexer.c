@@ -511,7 +511,7 @@ TokenList TokenizeSource(LoadedFile loadedFile)
             {
                 GetNextCharacter(&lexer);
                 Token token = {0};
-                token.type = TOKEN_GT_EQ;
+                token.type = TOKEN_NOT_EQ;
                 token.line = lexer.line;
                 token.column = lexer.column;
                 token.size = 2;                    

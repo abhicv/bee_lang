@@ -30,12 +30,12 @@ void PushSymbol(SymbolTable *table, Symbol symbol)
     if(table->count == 0) 
     {
         table->count++;
-        table->symbols = (Symbol*)malloc(sizeof(Type));
+        table->symbols = (Symbol*)malloc(sizeof(Symbol));
     }
     else 
     {
         table->count++;
-        table->symbols = (Symbol*)realloc(table->symbols, sizeof(Type) * table->count);
+        table->symbols = (Symbol*)realloc(table->symbols, sizeof(Symbol) * table->count);
     }
 
     table->symbols[table->count - 1] = symbol;
@@ -194,7 +194,7 @@ bool BuildTypeTable(AST *ast, Index rootIndex, TypeTable *typeTable)
                 // check if function with same name is already defined
                 int typeIndex = GetTypeTableIndexForFunctionId(typeTable, functionName); 
 
-                if(typeIndex != -1 && typeTable->types[typeIndex].isFunction)
+                if(typeIndex != -1)
                 {
                     printf("[ERROR] function with name '%s' already defined\n", functionName);
                     return false;
@@ -336,8 +336,34 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentFu
             printf("[TYPE ERROR] mismatch in operator parameter types , %d != %d\n", leftTypeIndex, rightTypeIndex);
         }
 
-        if (leftTypeIndex != GetTypeTableIndexForId(typeTable, "int")) {
-            printf("[TYPE ERROR] operator can only operate on int type\n");
+        int opType = node.operator.opType;
+
+        bool isComparatorOp = opType == COMPARE_OP_EQ_EQ || opType == COMPARE_OP_GT || 
+                            opType == COMPARE_OP_GT_EQ || opType == COMPARE_OP_LT || 
+                            opType == COMPARE_OP_LT_EQ || opType == COMPARE_OP_NOT_EQ;
+
+        if (isComparatorOp) {
+            if (leftTypeIndex != GetTypeTableIndexForId(typeTable, "int")) {
+                printf("[TYPE ERROR] compare operator can only operate on int type\n");
+            }
+            return GetTypeTableIndexForId(typeTable, "bool");
+        }
+
+        bool isArithmeticOp = opType == ARITHMETIC_OP_ADD || opType == ARITHMETIC_OP_SUB || 
+                                opType == ARITHMETIC_OP_MUL || opType == ARITHMETIC_OP_DIV || opType == ARITHMETIC_OP_MOD;
+
+        if (isArithmeticOp) {
+            if (leftTypeIndex != GetTypeTableIndexForId(typeTable, "int")) {
+                printf("[TYPE ERROR] arithmetic operator can only operate on int type\n");
+            }
+        }
+
+        bool isBooleanOp = opType == BOOL_OP_AND || opType == BOOL_OP_NOT || opType == BOOL_OP_OR;
+
+        if (isBooleanOp) {
+            if (leftTypeIndex != GetTypeTableIndexForId(typeTable, "bool")) {
+                printf("[TYPE ERROR] boolean operator can only operate on boolean type\n");
+            }
         }
 
         return leftTypeIndex;

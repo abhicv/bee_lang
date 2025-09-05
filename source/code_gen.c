@@ -75,6 +75,48 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
         }
         break;
 
+        case NODE_IF_STATEMENT: {
+
+            GenerateCode(ast, node.ifStmt.conditionExpr, typeTable, currentFunctionTypeTableIndex, false);
+
+            AddInstr(INSTR(JZ, -1));
+
+            Instruction *condJmpInstr = &instructions[instrCount - 1];
+
+            GenerateCode(ast, node.ifStmt.trueBlock, typeTable, currentFunctionTypeTableIndex, false);
+
+            AddInstr(INSTR(JMP, -1));
+
+            Instruction *unCondJmpInstr = &instructions[instrCount - 1];
+
+            condJmpInstr->operand = instrCount;
+
+            if (node.ifStmt.falseBlockExist) {
+                GenerateCode(ast, node.ifStmt.falseBlock, typeTable, currentFunctionTypeTableIndex, false);            
+            }
+
+            unCondJmpInstr->operand = instrCount;
+        }
+        break;
+
+        case NODE_WHILE_STATEMENT: {
+
+            int unCondJumpAddress = instrCount;
+
+            GenerateCode(ast, node.whileStmt.conditionExpr, typeTable, currentFunctionTypeTableIndex, false);
+            
+            AddInstr(INSTR(JZ, -1));
+
+            Instruction *condJmpInstr = &instructions[instrCount - 1];
+
+            GenerateCode(ast, node.whileStmt.block, typeTable, currentFunctionTypeTableIndex, false);
+
+            AddInstr(INSTR(JMP, unCondJumpAddress));
+
+            condJmpInstr->operand = instrCount;
+        }
+        break;
+
         case NODE_IDENTIFIER: {
             int varIndex = GetVarIndexForName(typeTable, currentFunctionTypeTableIndex, (char*)node.identifier.value);
             assert(varIndex != -1);
@@ -107,6 +149,30 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
                 AddInstr(INSTR(DIV, 0));
                 break;
 
+            case COMPARE_OP_LT:
+                AddInstr(INSTR(LT, 0));
+                break;
+
+            case COMPARE_OP_GT:
+                AddInstr(INSTR(GT, 0));
+                break;
+
+            case COMPARE_OP_LT_EQ:
+                AddInstr(INSTR(LE, 0));
+                break;
+
+            case COMPARE_OP_GT_EQ:
+                AddInstr(INSTR(GE, 0));
+                break;
+
+            case COMPARE_OP_EQ_EQ:
+                AddInstr(INSTR(EQ, 0));
+                break;
+
+            case COMPARE_OP_NOT_EQ:
+                AddInstr(INSTR(NEQ, 0));
+                break;
+                
             default:
                 printf("Unsupported operator for code generation\n");
                 break;
@@ -116,6 +182,15 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
 
         case NODE_INTEGER_CONSTANT: {
             AddInstr(INSTR(PUSH, node.integer.value));
+        }
+        break;
+        
+        case NODE_BOOLEAN_CONSTANT: {
+            if (node.boolean.isTrue) {
+                AddInstr(INSTR(PUSH, 1));
+            } else {
+                AddInstr(INSTR(PUSH, 0));
+            }
         }
         break;
 

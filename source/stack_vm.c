@@ -23,6 +23,7 @@ enum InstructionType {
     GT,
     GE,
     LE,
+    NEQ,
 
     JMP,
     JZ,
@@ -88,6 +89,8 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
     while(!stop) {
 
         if (vm.instrPointer == instrCount) break;
+
+        printf("IP: %d\n", vm.instrPointer);
 
         Instruction instruction = instructions[vm.instrPointer];
         
@@ -190,6 +193,16 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
         }
         break;
 
+        case NEQ: 
+        {
+            assert(vm.stackPointer > 0);
+            int result = vm.stack[vm.stackPointer - 1] != vm.stack[vm.stackPointer];
+            vm.stackPointer -= 2;
+            vm.stack[++vm.stackPointer] = result;            
+            vm.instrPointer++;
+        }
+        break;
+
         case LT: 
         {
             assert(vm.stackPointer > 0);
@@ -240,6 +253,7 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
 
         case JZ:
         {
+            assert(instruction.operand > -1);
             int value = vm.stack[vm.stackPointer--];
             if (value == 0) {
                 assert(instruction.operand < instrCount);
@@ -253,6 +267,7 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
 
         case JNZ:
         {
+            assert(instruction.operand > -1);
             int value = vm.stack[vm.stackPointer--];
             if (value != 0) {
                 assert(instruction.operand < instrCount);
@@ -266,8 +281,9 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
 
         case CALL: 
         {
-            int index = GetFunctionByAddress(functionTable, instruction.operand);
+            assert(instruction.operand > -1);
 
+            int index = GetFunctionByAddress(functionTable, instruction.operand);
             if(index != -1) {
 
                 Function function = functionTable.functions[index]; 
@@ -300,6 +316,7 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
             vm.stack[frame.start] = vm.stack[vm.stackPointer];
             vm.stackPointer = frame.start;
             vm.instrPointer = frame.returnAddr;
+            assert(frame.returnAddr > -1);
             vm.framePointer--;
         }
         break;
@@ -372,6 +389,7 @@ void PrintInstruction(FILE *file, Instruction *instructions, int count, bool sho
         case GT:    fprintf(file, "GT\n"); break;
         case GE:    fprintf(file, "GE\n"); break;
         case LE:    fprintf(file, "LE\n"); break;
+        case NEQ:    fprintf(file, "NEQ\n"); break;
 
         case JMP:   fprintf(file, "JMP %d\n", instruction.operand); break;
         case JZ:    fprintf(file, "JZ %d\n", instruction.operand); break;
