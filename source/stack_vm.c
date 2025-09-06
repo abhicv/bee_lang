@@ -40,6 +40,7 @@ enum InstructionType {
 typedef struct {
     enum InstructionType type;
     int operand;
+    char *label;
 } Instruction;
 
 typedef struct {
@@ -48,6 +49,7 @@ typedef struct {
 } StackFrame;
 
 typedef struct {
+    char *name;
     int startAddress;
     int paramsCount;
     int localsCount;
@@ -68,7 +70,7 @@ typedef struct {
     int heap[1024];
     int heapPointer;
 
-    StackFrame frames[10];
+    StackFrame frames[100];
     int framePointer;
 
 } StackVM;
@@ -76,6 +78,15 @@ typedef struct {
 int GetFunctionByAddress(FunctionTable table, int address) {
     for(int n = 0; n < table.count; n++) {
         if(address == table.functions[n].startAddress) {
+            return n;
+        }
+    }
+    return -1;
+}
+
+int GetFunctionByName(FunctionTable table, char *name) {
+    for(int n = 0; n < table.count; n++) {
+        if(!strcmp(table.functions[n].name, name)) {
             return n;
         }
     }
@@ -90,7 +101,7 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
 
         if (vm.instrPointer == instrCount) break;
 
-        printf("IP: %d\n", vm.instrPointer);
+        // printf("IP: %d\n", vm.instrPointer);
 
         Instruction instruction = instructions[vm.instrPointer];
         
@@ -284,6 +295,7 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
             assert(instruction.operand > -1);
 
             int index = GetFunctionByAddress(functionTable, instruction.operand);
+
             if(index != -1) {
 
                 Function function = functionTable.functions[index]; 
@@ -405,125 +417,3 @@ void PrintInstruction(FILE *file, Instruction *instructions, int count, bool sho
         }
     }
 }
-
-int __main() {
-
-    StackVM vm = InitVM();
-
-    // Instruction instructions[] = {
-    //     // i = 0
-    //     INSTR(PUSH, 0),      // 0
-
-    //     INSTR(PUSH, 0),      // 2
-    //     INSTR(PUSH, 1),      // 4
-    //     INSTR(PUSH, 20),     // 6
-    //     INSTR(PUSH, 0),     // 6
-
-    //     // --- loop start (8) ---
-    //     // if (i < n) continue else HALT
-    //     INSTR(LOAD, 0),      // 8   push i
-    //     INSTR(LOAD, 3),      // 9   push n
-    //     INSTR(LT,   0),      // 10  i < n
-    //     INSTR(JZ,   23),     // 11  if false -> HALT
-
-    //     // print a
-    //     INSTR(LOAD, 1),      // 12  a
-    //     INSTR(PRINT, 0),      // 13
-
-    //     // tmp = a + b
-    //     INSTR(LOAD, 2),      // 15  b
-    //     INSTR(ADD,  0),      // 16
-    //     INSTR(STORE, 4),      // 17  tmp
-
-    //     // a = b
-    //     INSTR(LOAD, 2),      // 18
-    //     INSTR(STORE, 1),      // 19
-
-    //     // b = tmp
-    //     INSTR(LOAD, 4),      // 20
-    //     INSTR(STORE, 2),      // 21
-
-    //     // i = i + 1
-    //     INSTR(LOAD, 0),      // 22
-    //     INSTR(PUSH, 1),      // 23
-    //     INSTR(ADD,  0),      // 24
-    //     INSTR(STORE,0),      // 25
-
-    //     // jump to loop start
-    //     INSTR(JMP,  5),      // 26
-
-    //     // HALT
-    //     INSTR(HALT, 0)       // 27
-    // };
-
-    Instruction instructions[] = {
-        // ADD
-        INSTR(LOAD, 0),
-        INSTR(LOAD, 1),
-        INSTR(ADD, 0),
-        INSTR(CALL, 5),
-        INSTR(RET, 0),
-
-        // PRINT
-        INSTR(LOAD, 0),
-        INSTR(PRINT, 0),
-        INSTR(RET, 0),
-
-        // MAIN
-        INSTR(PUSH, 10),
-        INSTR(PUSH, 20),
-        INSTR(CALL, 0),
-        INSTR(PRINT, 0),
-        INSTR(RET, 0),
-    };
-
-    int instrCount = sizeof(instructions) / sizeof(instructions[0]);
-
-    vm.instrPointer = 8;
-
-    Function functions[] = {
-        {
-            .localsCount = 0,
-            .paramsCount = 2,
-            .startAddress = 0
-        },
-        {
-            .localsCount = 0,
-            .paramsCount = 1,
-            .startAddress = 5
-        }
-    };
-    
-    FunctionTable functionTable = {0};
-    functionTable.functions = functions;
-    functionTable.count = (sizeof(functions) / sizeof(functions[0]));
-
-    PrintInstruction(stdout, instructions, instrCount, true);
-    execute(vm, instructions, instrCount, functionTable);  
-
-    return 0;
-}
-
-// int main() {
-    
-//     StackVM vm = InitVM();
-
-//     Instruction instructions[] = {
-//         INSTR(PUSH, 0),
-//         INSTR(LOAD, 0),
-//         INSTR(PRINT, 0),
-//         INSTR(PUSH, 1),
-//         INSTR(ADD, 0),
-//         INSTR(STORE, 0),
-//         INSTR(PUSH, 100),
-//         INSTR(LOAD, 0),
-//         INSTR(LT, 0),
-//         INSTR(JNZ, 1),
-//         INSTR(HALT, 0)
-//     };
-
-//     int instrCount = sizeof(instructions) / sizeof(instructions[0]);
-
-//     PrintInstruction(stdout, instructions, instrCount, false);
-//     // execute(vm, instructions, instrCount);
-// }

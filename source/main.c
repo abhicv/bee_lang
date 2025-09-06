@@ -47,38 +47,33 @@ int main(int argc, char *argv[])
 
             bool isSuccess = BuildTypeTable(&ast, rootIndex, &globalTypeTable);
 
-            if(isSuccess) {
-                TypeCheckAST(&ast, rootIndex, &globalTypeTable);
-                // PrintTypeTable(globalTypeTable);
+            if (!isSuccess) {
+                printf("Building type table failed\n");
+                return;
             }
 
-            // InterpretAST(ast, globalTypeTable);
+            TypeCheckAST(&ast, rootIndex, &globalTypeTable);
+            PrintTypeTable(globalTypeTable);
 
             GenerateCode(ast, rootIndex, globalTypeTable, -1, false);
-            PrintInstruction(stdout, instructions, instrCount, true);
 
-            Function functons[] = {
-                {
-                    .localsCount = 1,
-                    .paramsCount = 0,
-                    .startAddress = 0,
-                }
-            };
-
-            FunctionTable functionTable = {0};
-            functionTable.functions = functons;
-            functionTable.count = sizeof(functons) / sizeof(functons[0]);
-
-            StackFrame frame = {
-                .returnAddr = -1,
-                .start = 0,
-            };
+            functionTable.functions = functions;
+            functionTable.count = functionCount;
 
             StackVM vm = InitVM();
-            vm.framePointer = 1;
-            vm.frames[1] = frame;
-            vm.stackPointer = 0;
             
+            ResolveCallAddress(instructions, instrCount, functionTable);
+            
+            vm.instrPointer = instrCount;
+
+            // Adding a call to main function
+            int mainFunctionIndex = GetFunctionByName(functionTable, "main");
+            assert(mainFunctionIndex != -1);
+            AddInstr(INSTR(CALL, functions[mainFunctionIndex].startAddress));
+            AddInstr(INSTR(HALT, 0));
+
+            PrintInstruction(stdout, instructions, instrCount, true);
+
             execute(vm, instructions, instrCount, functionTable);
 
             free(loadedFile.source.data);

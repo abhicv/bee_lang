@@ -17,9 +17,18 @@ fn main() : int {
     //     return 300;
     // }
 
-    while (a < 10) {
-        a = a + 1;
+    while (a < 100) {
+        print(a);
+        a = add(a, 1 * 2 - 1, q);
     }
 
     return 10;
+}
+
+fn add(a: int, b: int) : int {
+    return a + b;
+}
+
+fn scale(a: int, b: int): int {
+    return a * b;
 }

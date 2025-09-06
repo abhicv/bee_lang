@@ -1,47 +1,175 @@
 digraph AST {
-	NODE_TYPE_ANNOTATION_0 [shape=rectangle, label="type: int"]
-	NODE_IDENTIFIER_1 [shape=rectangle, label="id: a"]
+	NODE_IDENTIFIER_0 [shape=rectangle, label="id: a"]
+	NODE_TYPE_ANNOTATION_1 [shape=rectangle, label="type: int"]
 	NODE_VARIABLE_DECLARATION_2 [shape=rectangle, label="var decl"]
-	NODE_INTEGER_CONSTANT_3 [shape=rectangle, label="integer: 0"]
-	NODE_ASSIGN_STATEMENT_4 [shape=rectangle, label="assign stmt"]
-	NODE_IDENTIFIER_5 [shape=rectangle, label="id: a"]
-	NODE_L_VALUE_6 [shape=rectangle, label="l value"]
-	NODE_INTEGER_CONSTANT_7 [shape=rectangle, label="integer: 10"]
-	NODE_OPERATOR_8 [shape=rectangle, label="op: <"]
-	NODE_IDENTIFIER_9 [shape=rectangle, label="id: a"]
-	NODE_L_VALUE_10 [shape=rectangle, label="l value"]
-	NODE_IDENTIFIER_11 [shape=rectangle, label="id: a"]
-	NODE_L_VALUE_12 [shape=rectangle, label="l value"]
-	NODE_INTEGER_CONSTANT_13 [shape=rectangle, label="integer: 1"]
-	NODE_OPERATOR_14 [shape=rectangle, label="op: +"]
-	NODE_ASSIGN_STATEMENT_15 [shape=rectangle, label="assign stmt"]
-	NODE_STATEMENT_LIST_16 [shape=rectangle, label="statement list"]
-	NODE_WHILE_STATEMENT_17 [shape=rectangle, label="while stmt"]
-	NODE_INTEGER_CONSTANT_18 [shape=rectangle, label="integer: 10"]
-	NODE_RETURN_STATEMENT_19 [shape=rectangle, label="return stmt"]
-	NODE_STATEMENT_LIST_20 [shape=rectangle, label="statement list"]
-	NODE_FUNCTION_DEFINITION_21 [shape=rectangle, label="function: main"]
-	NODE_PROGRAM_22 [shape=rectangle, label="program"]
-	NODE_PROGRAM_22 -> NODE_FUNCTION_DEFINITION_21
-	NODE_FUNCTION_DEFINITION_21 -> NODE_TYPE_ANNOTATION_0
-	NODE_FUNCTION_DEFINITION_21 -> NODE_STATEMENT_LIST_20
-	NODE_STATEMENT_LIST_20 -> NODE_ASSIGN_STATEMENT_4
-	NODE_ASSIGN_STATEMENT_4 -> NODE_VARIABLE_DECLARATION_2
-	NODE_VARIABLE_DECLARATION_2 -> NODE_IDENTIFIER_1
-	NODE_ASSIGN_STATEMENT_4 -> NODE_INTEGER_CONSTANT_3
-	NODE_STATEMENT_LIST_20 -> NODE_WHILE_STATEMENT_17
-	NODE_WHILE_STATEMENT_17 -> NODE_OPERATOR_8
-	NODE_OPERATOR_8 -> NODE_L_VALUE_6
-	NODE_L_VALUE_6 -> NODE_IDENTIFIER_5
-	NODE_OPERATOR_8 -> NODE_INTEGER_CONSTANT_7
-	NODE_WHILE_STATEMENT_17 -> NODE_STATEMENT_LIST_16
-	NODE_STATEMENT_LIST_16 -> NODE_ASSIGN_STATEMENT_15
-	NODE_ASSIGN_STATEMENT_15 -> NODE_L_VALUE_10
-	NODE_L_VALUE_10 -> NODE_IDENTIFIER_9
-	NODE_ASSIGN_STATEMENT_15 -> NODE_OPERATOR_14
-	NODE_OPERATOR_14 -> NODE_L_VALUE_12
-	NODE_L_VALUE_12 -> NODE_IDENTIFIER_11
-	NODE_OPERATOR_14 -> NODE_INTEGER_CONSTANT_13
-	NODE_STATEMENT_LIST_20 -> NODE_RETURN_STATEMENT_19
-	NODE_RETURN_STATEMENT_19 -> NODE_INTEGER_CONSTANT_18
+	NODE_IDENTIFIER_3 [shape=rectangle, label="id: int"]
+	NODE_L_VALUE_4 [shape=rectangle, label="l value"]
+	NODE_INTEGER_CONSTANT_5 [shape=rectangle, label="integer: 10"]
+	NODE_FUNCTION_CALL_6 [shape=rectangle, label="function call: make()"]
+	NODE_ASSIGN_STATEMENT_7 [shape=rectangle, label="assign stmt"]
+	NODE_IDENTIFIER_8 [shape=rectangle, label="id: b"]
+	NODE_VARIABLE_DECLARATION_9 [shape=rectangle, label="var decl"]
+	NODE_IDENTIFIER_10 [shape=rectangle, label="id: int"]
+	NODE_L_VALUE_11 [shape=rectangle, label="l value"]
+	NODE_INTEGER_CONSTANT_12 [shape=rectangle, label="integer: 10"]
+	NODE_FUNCTION_CALL_13 [shape=rectangle, label="function call: make()"]
+	NODE_ASSIGN_STATEMENT_14 [shape=rectangle, label="assign stmt"]
+	NODE_INTEGER_CONSTANT_15 [shape=rectangle, label="integer: 5"]
+	NODE_FUNCTION_CALL_16 [shape=rectangle, label="function call: factorial()"]
+	NODE_FUNCTION_CALL_17 [shape=rectangle, label="function call: print()"]
+	NODE_INTEGER_CONSTANT_18 [shape=rectangle, label="integer: 12"]
+	NODE_FUNCTION_CALL_19 [shape=rectangle, label="function call: recu_factorial()"]
+	NODE_FUNCTION_CALL_20 [shape=rectangle, label="function call: print()"]
+	NODE_RETURN_STATEMENT_21 [shape=rectangle, label="return stmt"]
+	NODE_STATEMENT_LIST_22 [shape=rectangle, label="statement list"]
+	NODE_FUNCTION_DEFINITION_23 [shape=rectangle, label="function: main"]
+	NODE_TYPE_ANNOTATION_24 [shape=rectangle, label="type: int"]
+	NODE_IDENTIFIER_25 [shape=rectangle, label="id: n"]
+	NODE_PARAM_26 [shape=rectangle, label="parameter"]
+	NODE_TYPE_ANNOTATION_27 [shape=rectangle, label="type: int"]
+	NODE_IDENTIFIER_28 [shape=rectangle, label="id: factorial"]
+	NODE_VARIABLE_DECLARATION_29 [shape=rectangle, label="var decl"]
+	NODE_INTEGER_CONSTANT_30 [shape=rectangle, label="integer: 1"]
+	NODE_ASSIGN_STATEMENT_31 [shape=rectangle, label="assign stmt"]
+	NODE_IDENTIFIER_32 [shape=rectangle, label="id: i"]
+	NODE_VARIABLE_DECLARATION_33 [shape=rectangle, label="var decl"]
+	NODE_INTEGER_CONSTANT_34 [shape=rectangle, label="integer: 1"]
+	NODE_ASSIGN_STATEMENT_35 [shape=rectangle, label="assign stmt"]
+	NODE_IDENTIFIER_36 [shape=rectangle, label="id: i"]
+	NODE_L_VALUE_37 [shape=rectangle, label="l value"]
+	NODE_IDENTIFIER_38 [shape=rectangle, label="id: n"]
+	NODE_L_VALUE_39 [shape=rectangle, label="l value"]
+	NODE_OPERATOR_40 [shape=rectangle, label="op: <="]
+	NODE_IDENTIFIER_41 [shape=rectangle, label="id: factorial"]
+	NODE_L_VALUE_42 [shape=rectangle, label="l value"]
+	NODE_IDENTIFIER_43 [shape=rectangle, label="id: factorial"]
+	NODE_L_VALUE_44 [shape=rectangle, label="l value"]
+	NODE_IDENTIFIER_45 [shape=rectangle, label="id: i"]
+	NODE_L_VALUE_46 [shape=rectangle, label="l value"]
+	NODE_OPERATOR_47 [shape=rectangle, label="op: *"]
+	NODE_ASSIGN_STATEMENT_48 [shape=rectangle, label="assign stmt"]
+	NODE_IDENTIFIER_49 [shape=rectangle, label="id: i"]
+	NODE_L_VALUE_50 [shape=rectangle, label="l value"]
+	NODE_IDENTIFIER_51 [shape=rectangle, label="id: i"]
+	NODE_L_VALUE_52 [shape=rectangle, label="l value"]
+	NODE_INTEGER_CONSTANT_53 [shape=rectangle, label="integer: 1"]
+	NODE_OPERATOR_54 [shape=rectangle, label="op: +"]
+	NODE_ASSIGN_STATEMENT_55 [shape=rectangle, label="assign stmt"]
+	NODE_STATEMENT_LIST_56 [shape=rectangle, label="statement list"]
+	NODE_WHILE_STATEMENT_57 [shape=rectangle, label="while stmt"]
+	NODE_IDENTIFIER_58 [shape=rectangle, label="id: factorial"]
+	NODE_L_VALUE_59 [shape=rectangle, label="l value"]
+	NODE_RETURN_STATEMENT_60 [shape=rectangle, label="return stmt"]
+	NODE_STATEMENT_LIST_61 [shape=rectangle, label="statement list"]
+	NODE_FUNCTION_DEFINITION_62 [shape=rectangle, label="function: factorial"]
+	NODE_TYPE_ANNOTATION_63 [shape=rectangle, label="type: int"]
+	NODE_IDENTIFIER_64 [shape=rectangle, label="id: n"]
+	NODE_PARAM_65 [shape=rectangle, label="parameter"]
+	NODE_TYPE_ANNOTATION_66 [shape=rectangle, label="type: int"]
+	NODE_IDENTIFIER_67 [shape=rectangle, label="id: n"]
+	NODE_L_VALUE_68 [shape=rectangle, label="l value"]
+	NODE_INTEGER_CONSTANT_69 [shape=rectangle, label="integer: 1"]
+	NODE_OPERATOR_70 [shape=rectangle, label="op: =="]
+	NODE_INTEGER_CONSTANT_71 [shape=rectangle, label="integer: 1"]
+	NODE_RETURN_STATEMENT_72 [shape=rectangle, label="return stmt"]
+	NODE_STATEMENT_LIST_73 [shape=rectangle, label="statement list"]
+	NODE_IF_STATEMENT_74 [shape=rectangle, label="if stmt"]
+	NODE_IDENTIFIER_75 [shape=rectangle, label="id: n"]
+	NODE_L_VALUE_76 [shape=rectangle, label="l value"]
+	NODE_IDENTIFIER_77 [shape=rectangle, label="id: n"]
+	NODE_L_VALUE_78 [shape=rectangle, label="l value"]
+	NODE_INTEGER_CONSTANT_79 [shape=rectangle, label="integer: 1"]
+	NODE_OPERATOR_80 [shape=rectangle, label="op: -"]
+	NODE_FUNCTION_CALL_81 [shape=rectangle, label="function call: recu_factorial()"]
+	NODE_OPERATOR_82 [shape=rectangle, label="op: *"]
+	NODE_RETURN_STATEMENT_83 [shape=rectangle, label="return stmt"]
+	NODE_STATEMENT_LIST_84 [shape=rectangle, label="statement list"]
+	NODE_FUNCTION_DEFINITION_85 [shape=rectangle, label="function: recu_factorial"]
+	NODE_PROGRAM_86 [shape=rectangle, label="program"]
+	NODE_PROGRAM_86 -> NODE_FUNCTION_DEFINITION_23
+	NODE_FUNCTION_DEFINITION_23 -> NODE_STATEMENT_LIST_22
+	NODE_STATEMENT_LIST_22 -> NODE_ASSIGN_STATEMENT_7
+	NODE_ASSIGN_STATEMENT_7 -> NODE_VARIABLE_DECLARATION_2
+	NODE_VARIABLE_DECLARATION_2 -> NODE_IDENTIFIER_0
+	NODE_VARIABLE_DECLARATION_2 -> NODE_TYPE_ANNOTATION_1
+	NODE_ASSIGN_STATEMENT_7 -> NODE_FUNCTION_CALL_6
+	NODE_FUNCTION_CALL_6 -> NODE_L_VALUE_4
+	NODE_L_VALUE_4 -> NODE_IDENTIFIER_3
+	NODE_FUNCTION_CALL_6 -> NODE_INTEGER_CONSTANT_5
+	NODE_STATEMENT_LIST_22 -> NODE_ASSIGN_STATEMENT_14
+	NODE_ASSIGN_STATEMENT_14 -> NODE_VARIABLE_DECLARATION_9
+	NODE_VARIABLE_DECLARATION_9 -> NODE_IDENTIFIER_8
+	NODE_ASSIGN_STATEMENT_14 -> NODE_FUNCTION_CALL_13
+	NODE_FUNCTION_CALL_13 -> NODE_L_VALUE_11
+	NODE_L_VALUE_11 -> NODE_IDENTIFIER_10
+	NODE_FUNCTION_CALL_13 -> NODE_INTEGER_CONSTANT_12
+	NODE_STATEMENT_LIST_22 -> NODE_FUNCTION_CALL_17
+	NODE_FUNCTION_CALL_17 -> NODE_FUNCTION_CALL_16
+	NODE_FUNCTION_CALL_16 -> NODE_INTEGER_CONSTANT_15
+	NODE_STATEMENT_LIST_22 -> NODE_FUNCTION_CALL_20
+	NODE_FUNCTION_CALL_20 -> NODE_FUNCTION_CALL_19
+	NODE_FUNCTION_CALL_19 -> NODE_INTEGER_CONSTANT_18
+	NODE_STATEMENT_LIST_22 -> NODE_RETURN_STATEMENT_21
+	NODE_PROGRAM_86 -> NODE_FUNCTION_DEFINITION_62
+	NODE_FUNCTION_DEFINITION_62 -> NODE_PARAM_26
+	NODE_PARAM_26 -> NODE_IDENTIFIER_25
+	NODE_PARAM_26 -> NODE_TYPE_ANNOTATION_24
+	NODE_FUNCTION_DEFINITION_62 -> NODE_TYPE_ANNOTATION_27
+	NODE_FUNCTION_DEFINITION_62 -> NODE_STATEMENT_LIST_61
+	NODE_STATEMENT_LIST_61 -> NODE_ASSIGN_STATEMENT_31
+	NODE_ASSIGN_STATEMENT_31 -> NODE_VARIABLE_DECLARATION_29
+	NODE_VARIABLE_DECLARATION_29 -> NODE_IDENTIFIER_28
+	NODE_ASSIGN_STATEMENT_31 -> NODE_INTEGER_CONSTANT_30
+	NODE_STATEMENT_LIST_61 -> NODE_ASSIGN_STATEMENT_35
+	NODE_ASSIGN_STATEMENT_35 -> NODE_VARIABLE_DECLARATION_33
+	NODE_VARIABLE_DECLARATION_33 -> NODE_IDENTIFIER_32
+	NODE_ASSIGN_STATEMENT_35 -> NODE_INTEGER_CONSTANT_34
+	NODE_STATEMENT_LIST_61 -> NODE_WHILE_STATEMENT_57
+	NODE_WHILE_STATEMENT_57 -> NODE_OPERATOR_40
+	NODE_OPERATOR_40 -> NODE_L_VALUE_37
+	NODE_L_VALUE_37 -> NODE_IDENTIFIER_36
+	NODE_OPERATOR_40 -> NODE_L_VALUE_39
+	NODE_L_VALUE_39 -> NODE_IDENTIFIER_38
+	NODE_WHILE_STATEMENT_57 -> NODE_STATEMENT_LIST_56
+	NODE_STATEMENT_LIST_56 -> NODE_ASSIGN_STATEMENT_48
+	NODE_ASSIGN_STATEMENT_48 -> NODE_L_VALUE_42
+	NODE_L_VALUE_42 -> NODE_IDENTIFIER_41
+	NODE_ASSIGN_STATEMENT_48 -> NODE_OPERATOR_47
+	NODE_OPERATOR_47 -> NODE_L_VALUE_44
+	NODE_L_VALUE_44 -> NODE_IDENTIFIER_43
+	NODE_OPERATOR_47 -> NODE_L_VALUE_46
+	NODE_L_VALUE_46 -> NODE_IDENTIFIER_45
+	NODE_STATEMENT_LIST_56 -> NODE_ASSIGN_STATEMENT_55
+	NODE_ASSIGN_STATEMENT_55 -> NODE_L_VALUE_50
+	NODE_L_VALUE_50 -> NODE_IDENTIFIER_49
+	NODE_ASSIGN_STATEMENT_55 -> NODE_OPERATOR_54
+	NODE_OPERATOR_54 -> NODE_L_VALUE_52
+	NODE_L_VALUE_52 -> NODE_IDENTIFIER_51
+	NODE_OPERATOR_54 -> NODE_INTEGER_CONSTANT_53
+	NODE_STATEMENT_LIST_61 -> NODE_RETURN_STATEMENT_60
+	NODE_RETURN_STATEMENT_60 -> NODE_L_VALUE_59
+	NODE_L_VALUE_59 -> NODE_IDENTIFIER_58
+	NODE_PROGRAM_86 -> NODE_FUNCTION_DEFINITION_85
+	NODE_FUNCTION_DEFINITION_85 -> NODE_PARAM_65
+	NODE_PARAM_65 -> NODE_IDENTIFIER_64
+	NODE_PARAM_65 -> NODE_TYPE_ANNOTATION_63
+	NODE_FUNCTION_DEFINITION_85 -> NODE_TYPE_ANNOTATION_66
+	NODE_FUNCTION_DEFINITION_85 -> NODE_STATEMENT_LIST_84
+	NODE_STATEMENT_LIST_84 -> NODE_IF_STATEMENT_74
+	NODE_IF_STATEMENT_74 -> NODE_OPERATOR_70
+	NODE_OPERATOR_70 -> NODE_L_VALUE_68
+	NODE_L_VALUE_68 -> NODE_IDENTIFIER_67
+	NODE_OPERATOR_70 -> NODE_INTEGER_CONSTANT_69
+	NODE_IF_STATEMENT_74 -> NODE_STATEMENT_LIST_73
+	NODE_STATEMENT_LIST_73 -> NODE_RETURN_STATEMENT_72
+	NODE_RETURN_STATEMENT_72 -> NODE_INTEGER_CONSTANT_71
+	NODE_STATEMENT_LIST_84 -> NODE_RETURN_STATEMENT_83
+	NODE_RETURN_STATEMENT_83 -> NODE_OPERATOR_82
+	NODE_OPERATOR_82 -> NODE_L_VALUE_76
+	NODE_L_VALUE_76 -> NODE_IDENTIFIER_75
+	NODE_OPERATOR_82 -> NODE_FUNCTION_CALL_81
+	NODE_FUNCTION_CALL_81 -> NODE_OPERATOR_80
+	NODE_OPERATOR_80 -> NODE_L_VALUE_78
+	NODE_L_VALUE_78 -> NODE_IDENTIFIER_77
+	NODE_OPERATOR_80 -> NODE_INTEGER_CONSTANT_79
 }

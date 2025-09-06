@@ -307,6 +307,7 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentFu
                 symbol->typeTableIndex = rightTypeIndex;
 
                 // TODO: tranasfer the isArray value from right expression to left expression
+                //  should a new array type for every type be entered into the type table
             }
         }
         
@@ -392,6 +393,7 @@ int TypeCheckNode(AST *ast, Index nodeIndex, TypeTable *typeTable, int currentFu
     {
         // check for implicit function
         if(!strcmp("make", node.functionCall.id)) {
+
             if (node.functionCall.argumentCount > 0 && node.functionCall.argumentCount <= 2) {
 
                 Node lValue = ast->nodeList[node.functionCall.arguments[0]];

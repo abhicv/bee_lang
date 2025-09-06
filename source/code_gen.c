@@ -7,10 +7,22 @@
 static Instruction instructions[MAX_INSTR_COUNT] = {0};
 static int instrCount = 0;
 
+#define MAX_FUNCTIONS 20
+static Function functions[MAX_FUNCTIONS] = {0};
+static int functionCount = 0;
+
+static FunctionTable functionTable = {0};
+
 void AddInstr(Instruction instruction) 
 {
     assert(instrCount < MAX_INSTR_COUNT);
     instructions[instrCount++] = instruction;
+}
+
+void AddFunction(Function function) 
+{
+    assert(functionCount < MAX_FUNCTIONS);
+    functions[functionCount++] = function;
 }
 
 int GetVarIndexForName(TypeTable typeTable, int functionTypeTableIndex, char *name) 
@@ -30,6 +42,17 @@ int GetVarIndexForName(TypeTable typeTable, int functionTypeTableIndex, char *na
     return index;
 }
 
+void ResolveCallAddress(Instruction *instructions, int instrCount, FunctionTable functionTable) {
+    for(int n = 0; n < instrCount; n++) {
+        Instruction *instr = &instructions[n];        
+        if (instr->type == CALL) {
+            int functionIndex = GetFunctionByName(functionTable, instr->label);
+            assert(functionIndex != -1);
+            instr->operand = functionTable.functions[functionIndex].startAddress;
+        }
+    }
+}
+
 int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionTypeTableIndex, bool isStore) 
 {
     Node node = ast.nodeList[index];
@@ -44,7 +67,17 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
         break;
 
         case NODE_FUNCTION_DEFINITION: {
+
             int functionTypeTableIndex = GetTypeTableIndexForFunctionId(&typeTable, node.functionDef.name);
+
+            Function function = {0};
+            function.localsCount = typeTable.types[functionTypeTableIndex].localSymbolList.count;
+            function.paramsCount = typeTable.types[functionTypeTableIndex].paramList.count;
+            function.startAddress = instrCount;
+            function.name = strdup(node.functionDef.name);
+
+            AddFunction(function);
+
             GenerateCode(ast, node.functionDef.body, typeTable, functionTypeTableIndex, isStore);
         }
         break;
@@ -52,6 +85,21 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
         case NODE_STATEMENT_LIST: {
             for(int n = 0; n < node.statementList.statementCount; n++) {
                 GenerateCode(ast, node.statementList.statements[n], typeTable, currentFunctionTypeTableIndex, isStore);
+            }
+        }
+        break;
+
+        case NODE_FUNCTION_CALL: {
+            if (!strcmp("print", node.functionCall.id)) {
+                GenerateCode(ast, node.functionCall.arguments[0], typeTable, currentFunctionTypeTableIndex, false);
+                AddInstr(INSTR(PRINT, 0));
+            } else {
+                for(int n = 0; n < node.functionCall.argumentCount; n++) {
+                    GenerateCode(ast, node.functionCall.arguments[n], typeTable, currentFunctionTypeTableIndex, false);
+                }
+                // resolve the function address later
+                AddInstr(INSTR(CALL, -1));
+                instructions[instrCount - 1].label = (char*)node.functionCall.id;
             }
         }
         break;
