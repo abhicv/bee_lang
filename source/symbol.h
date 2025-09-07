@@ -50,7 +50,7 @@ int GetSymbolTableIndexForId(SymbolTable *symbolTable, const char *symbolName);
 
 bool BuildTypeTable(AST *ast, Index rootIndex, TypeTable *globalTypeTable);
 
-void PrintType(Type type);
+void PrintTypeInfo(Type type);
 void PrintTypeTable(TypeTable typeTable);
 
 #endif

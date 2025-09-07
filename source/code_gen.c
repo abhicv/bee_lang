@@ -2,6 +2,7 @@
 #include "symbol.h"
 #include "stack_vm.c"
 #include "assert.h"
+#include "symbol.h"
 
 #define MAX_INSTR_COUNT 2000
 static Instruction instructions[MAX_INSTR_COUNT] = {0};
@@ -42,10 +43,31 @@ int GetVarIndexForName(TypeTable typeTable, int functionTypeTableIndex, char *na
     return index;
 }
 
+Symbol* GetSymbolInFunction(TypeTable typeTable, int functionTypeIndex, char *symbolName) {
+    Type functionType = typeTable.types[functionTypeIndex];
+    int index = GetSymbolTableIndexForId(&functionType.localSymbolList, symbolName);
+    if (index != -1) return &functionType.localSymbolList.symbols[index];
+    index = GetSymbolTableIndexForId(&functionType.paramList, symbolName);
+    if (index != -1) return &functionType.paramList.symbols[index];
+    return 0;
+}
+
+int GetFieldOffsetInParent(TypeTable typeTable, int parentTypeIndex, char* fieldName) {        
+    assert(parentTypeIndex != -1);
+    Type type = typeTable.types[parentTypeIndex];
+    for(int n = 0; n  < type.fieldList.count; n++) {
+        if(!strcmp(type.fieldList.symbols[n].name, fieldName)) {
+            return n;
+        }
+    }
+    return -1;
+}
+
 void ResolveCallAddress(Instruction *instructions, int instrCount, FunctionTable functionTable) {
     for(int n = 0; n < instrCount; n++) {
         Instruction *instr = &instructions[n];        
         if (instr->type == CALL) {
+            assert(instr->label != NULL);
             int functionIndex = GetFunctionByName(functionTable, instr->label);
             assert(functionIndex != -1);
             instr->operand = functionTable.functions[functionIndex].startAddress;
@@ -53,7 +75,7 @@ void ResolveCallAddress(Instruction *instructions, int instrCount, FunctionTable
     }
 }
 
-int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionTypeTableIndex, bool isStore) 
+void GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionTypeTableIndex, int parentTypeIndex, bool isStore) 
 {
     Node node = ast.nodeList[index];
 
@@ -61,7 +83,7 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
 
         case NODE_PROGRAM: {
             for(int n = 0; n < node.program.defCount; n++) {
-                GenerateCode(ast, node.program.definitions[n], typeTable, currentFunctionTypeTableIndex, isStore);
+                GenerateCode(ast, node.program.definitions[n], typeTable, currentFunctionTypeTableIndex, parentTypeIndex, isStore);
             }
         }
         break;
@@ -78,24 +100,36 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
 
             AddFunction(function);
 
-            GenerateCode(ast, node.functionDef.body, typeTable, functionTypeTableIndex, isStore);
+            GenerateCode(ast, node.functionDef.body, typeTable, functionTypeTableIndex, parentTypeIndex, isStore);
         }
         break;
 
         case NODE_STATEMENT_LIST: {
             for(int n = 0; n < node.statementList.statementCount; n++) {
-                GenerateCode(ast, node.statementList.statements[n], typeTable, currentFunctionTypeTableIndex, isStore);
+                GenerateCode(ast, node.statementList.statements[n], typeTable, currentFunctionTypeTableIndex, parentTypeIndex, isStore);
             }
         }
         break;
 
         case NODE_FUNCTION_CALL: {
             if (!strcmp("print", node.functionCall.id)) {
-                GenerateCode(ast, node.functionCall.arguments[0], typeTable, currentFunctionTypeTableIndex, false);
+                GenerateCode(ast, node.functionCall.arguments[0], typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);
                 AddInstr(INSTR(PRINT, 0));
+            } else if (!strcmp("make", node.functionCall.id)) {
+                assert(node.functionCall.argumentCount > 0);
+                assert(node.functionCall.argumentCount <= 2);
+                if(node.functionCall.argumentCount == 1) {
+                    Node lValue = ast.nodeList[node.functionCall.arguments[0]];
+                    Node id = ast.nodeList[lValue.lValue.simpleLValues[0]];
+                    int typeTableIndex = GetTypeTableIndexForId(&typeTable, id.identifier.value);
+                    assert(typeTableIndex != -1);
+                    AddInstr(INSTR(NEWSTRUCT, typeTableIndex));
+                } else {
+                    AddInstr(INSTR(NEWARRAY, 0));
+                }
             } else {
                 for(int n = 0; n < node.functionCall.argumentCount; n++) {
-                    GenerateCode(ast, node.functionCall.arguments[n], typeTable, currentFunctionTypeTableIndex, false);
+                    GenerateCode(ast, node.functionCall.arguments[n], typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);
                 }
                 // resolve the function address later
                 AddInstr(INSTR(CALL, -1));
@@ -105,33 +139,88 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
         break;
 
         case NODE_L_VALUE: {
-            return GenerateCode(ast, node.lValue.simpleLValues[0], typeTable, currentFunctionTypeTableIndex, isStore);
+
+            // if only a single indentifier
+            if (node.lValue.simpleLValueCount == 1) {
+                GenerateCode(ast, node.lValue.simpleLValues[0], typeTable, currentFunctionTypeTableIndex, parentTypeIndex, isStore);
+                return;
+            }
+
+            // a.b = load, getfield
+            // a.b.c = load, getfield, getfield
+            // a.b.c.d = load, getfield, getfield, getfield
+            
+            // a.b = load, putfield
+            // a.b.c = load, getfield, putfield
+            // a.b.c.d = load, getfield, getfield, putfield
+
+            int prevTypeIndex = -1;
+
+            for(int n = 0; n < (node.lValue.simpleLValueCount - 1); n++) {
+
+                GenerateCode(ast, node.lValue.simpleLValues[n], typeTable, currentFunctionTypeTableIndex, prevTypeIndex, false);
+
+                Node id = ast.nodeList[node.lValue.simpleLValues[n]];
+                assert(id.type == NODE_IDENTIFIER);
+
+                if (prevTypeIndex == -1) {
+                    Symbol *symbol = GetSymbolInFunction(typeTable, currentFunctionTypeTableIndex, (char*)id.identifier.value);
+                    assert(symbol != 0);
+                    prevTypeIndex = symbol->typeTableIndex;
+                } else {
+                    int fieldOffset = GetFieldOffsetInParent(typeTable, prevTypeIndex, (char*)id.identifier.value);
+                    assert(fieldOffset != -1);
+                    prevTypeIndex = typeTable.types[prevTypeIndex].fieldList.symbols[fieldOffset].typeTableIndex;
+                }
+            }
+
+            int lastIndex = (node.lValue.simpleLValueCount - 1);
+
+            GenerateCode(ast, node.lValue.simpleLValues[lastIndex], typeTable, currentFunctionTypeTableIndex, prevTypeIndex, isStore);
+        }
+        break;
+
+        case NODE_IDENTIFIER: {
+            if (parentTypeIndex == -1) {
+                int varIndex = GetVarIndexForName(typeTable, currentFunctionTypeTableIndex, (char*)node.identifier.value);
+                assert(varIndex != -1);
+                if (isStore) {
+                    AddInstr(INSTR(STORE, varIndex));
+                } else {
+                    AddInstr(INSTR(LOAD, varIndex));
+                }
+            } else {
+                int offset = GetFieldOffsetInParent(typeTable, parentTypeIndex, (char*)node.identifier.value);
+                assert(offset != -1);
+                if (isStore) {
+                    AddInstr(INSTR(PUTFIELD, offset));               
+                } else {
+                    AddInstr(INSTR(GETFIELD, offset));                
+                }
+            }
         }
         break;
 
         case NODE_ASSIGN_STATEMENT: {
-            GenerateCode(ast, node.assignStmt.expression, typeTable, currentFunctionTypeTableIndex, false);            
-            int varIndex = GenerateCode(ast, node.assignStmt.lValue, typeTable, currentFunctionTypeTableIndex, true);            
-            AddInstr(INSTR(STORE, varIndex));
+            GenerateCode(ast, node.assignStmt.expression, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);            
+            GenerateCode(ast, node.assignStmt.lValue, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, true);            
         }
         break;
 
         case NODE_VARIABLE_DECLARATION: {
-            int varIndex = GenerateCode(ast, node.varDecl.id, typeTable, currentFunctionTypeTableIndex, true);            
-            assert(varIndex != -1);
-            return varIndex;
+            GenerateCode(ast, node.varDecl.id, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, true);            
         }
         break;
 
         case NODE_IF_STATEMENT: {
 
-            GenerateCode(ast, node.ifStmt.conditionExpr, typeTable, currentFunctionTypeTableIndex, false);
+            GenerateCode(ast, node.ifStmt.conditionExpr, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);
 
             AddInstr(INSTR(JZ, -1));
 
             Instruction *condJmpInstr = &instructions[instrCount - 1];
 
-            GenerateCode(ast, node.ifStmt.trueBlock, typeTable, currentFunctionTypeTableIndex, false);
+            GenerateCode(ast, node.ifStmt.trueBlock, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);
 
             AddInstr(INSTR(JMP, -1));
 
@@ -140,7 +229,7 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
             condJmpInstr->operand = instrCount;
 
             if (node.ifStmt.falseBlockExist) {
-                GenerateCode(ast, node.ifStmt.falseBlock, typeTable, currentFunctionTypeTableIndex, false);            
+                GenerateCode(ast, node.ifStmt.falseBlock, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);            
             }
 
             unCondJmpInstr->operand = instrCount;
@@ -151,13 +240,13 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
 
             int unCondJumpAddress = instrCount;
 
-            GenerateCode(ast, node.whileStmt.conditionExpr, typeTable, currentFunctionTypeTableIndex, false);
+            GenerateCode(ast, node.whileStmt.conditionExpr, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);
             
             AddInstr(INSTR(JZ, -1));
 
             Instruction *condJmpInstr = &instructions[instrCount - 1];
 
-            GenerateCode(ast, node.whileStmt.block, typeTable, currentFunctionTypeTableIndex, false);
+            GenerateCode(ast, node.whileStmt.block, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);
 
             AddInstr(INSTR(JMP, unCondJumpAddress));
 
@@ -165,19 +254,9 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
         }
         break;
 
-        case NODE_IDENTIFIER: {
-            int varIndex = GetVarIndexForName(typeTable, currentFunctionTypeTableIndex, (char*)node.identifier.value);
-            assert(varIndex != -1);
-            if (isStore) {
-                return varIndex;
-            }
-            AddInstr(INSTR(LOAD, varIndex));
-        }
-        break;
-
         case NODE_OPERATOR: {
-            GenerateCode(ast, node.operator.left, typeTable, currentFunctionTypeTableIndex, false);            
-            GenerateCode(ast, node.operator.right, typeTable, currentFunctionTypeTableIndex, false);
+            GenerateCode(ast, node.operator.left, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);            
+            GenerateCode(ast, node.operator.right, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);
             
             switch (node.operator.opType)
             {
@@ -243,12 +322,10 @@ int GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunctionT
         break;
 
         case NODE_RETURN_STATEMENT: {
-            GenerateCode(ast, node.returnStmt.expression, typeTable, currentFunctionTypeTableIndex, false);            
+            GenerateCode(ast, node.returnStmt.expression, typeTable, currentFunctionTypeTableIndex, parentTypeIndex, false);            
             AddInstr(INSTR(RET, 0));
         }
         break;
     }
-
-    return -1;
 }
 

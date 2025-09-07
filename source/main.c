@@ -53,9 +53,9 @@ int main(int argc, char *argv[])
             }
 
             TypeCheckAST(&ast, rootIndex, &globalTypeTable);
-            PrintTypeTable(globalTypeTable);
+            // PrintTypeTable(globalTypeTable);
 
-            GenerateCode(ast, rootIndex, globalTypeTable, -1, false);
+            GenerateCode(ast, rootIndex, globalTypeTable, -1, -1, false);
 
             functionTable.functions = functions;
             functionTable.count = functionCount;
@@ -66,7 +66,6 @@ int main(int argc, char *argv[])
             
             vm.instrPointer = instrCount;
 
-            // Adding a call to main function
             int mainFunctionIndex = GetFunctionByName(functionTable, "main");
             assert(mainFunctionIndex != -1);
             AddInstr(INSTR(CALL, functions[mainFunctionIndex].startAddress));
@@ -74,8 +73,8 @@ int main(int argc, char *argv[])
 
             PrintInstruction(stdout, instructions, instrCount, true);
 
-            execute(vm, instructions, instrCount, functionTable);
-
+            execute(vm, instructions, instrCount, functionTable, globalTypeTable);
+            
             free(loadedFile.source.data);
             free(loadedFile.path.data);
         }

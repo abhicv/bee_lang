@@ -1,21 +1,43 @@
 struct A {
-    x : int;
-    b : [] B;
-}
-
-struct C {
-    x : int;
-}
-
-struct B {
-    x : int;
-    c : [] C;
+    x: int;
+    y: int;
     b: B;
 }
 
-fn compute_sum(x: int, a: A): int { 
-    x = 10; 
-    a.x = 10;
-    a.b[x].x = 0;
-    a.b[0].c[0].x = 10;
+struct B {
+    y: int;
+    z: int;
+    a: A;
+}
+
+fn main() {
+
+    let a = make(A);
+    print(a);
+    // a.b = make(B);
+
+    // if (a.b == 0) {
+    //     a.b = make(B);
+    // }
+
+    print(a.b);
+
+    if (a.b != 0) {
+        a.b.y = 100;
+        print(a.b.y);
+    }
+
+    // a.x = 10;
+    // a.b.y = 20;
+
+    // print(a.x);
+    // print(a.b.y);
+
+    // let i = 0;
+    // while(i < 10) {
+    //     a.x = i + 1;
+    //     i = a.x;
+    // }
+
+    return;
 }

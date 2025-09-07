@@ -150,20 +150,20 @@ bool BuildTypeTable(AST *ast, Index rootIndex, TypeTable *typeTable)
                 if(!strcmp(typeId, type->id)) 
                 {
                     typeTableIndex = n;
-                    totalSize += 1;
                 } 
                 else 
                 {
                     typeTableIndex = GetTypeTableIndexForId(typeTable, typeId);
-
+                    
                     if(typeTableIndex == -1) 
                     {
                         printf("[ERROR] undefined type: '%s' for field: '%s' in struct: '%s'\n", typeId, idNode.identifier.value, type->id);
                         return false;
                     }
-
-                    totalSize += typeTable->types[typeTableIndex].size;
+                    
                 }
+
+                totalSize += 1;
 
                 StructField field = {0};
                 field.name = idNode.identifier.value;

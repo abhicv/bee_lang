@@ -1,6 +1,7 @@
 #include "stdio.h"
 #include "assert.h"
 #include "stdbool.h"
+#include "symbol.h"
 
 #define INSTR(_type, _operand) (Instruction){.type = _type, .operand = _operand}
 
@@ -32,6 +33,11 @@ enum InstructionType {
     CALL,
     RET,
 
+    NEWSTRUCT,
+    NEWARRAY,
+    GETFIELD,
+    PUTFIELD,
+
     PRINT,
 
     HALT
@@ -60,6 +66,8 @@ typedef struct {
     int count;
 } FunctionTable;
 
+#define HEAP_SIZE 1024
+
 typedef struct {
 
     int instrPointer;    
@@ -67,7 +75,7 @@ typedef struct {
     int stack[1024];
     int stackPointer;
 
-    int heap[1024];
+    int heap[HEAP_SIZE];
     int heapPointer;
 
     StackFrame frames[100];
@@ -93,7 +101,7 @@ int GetFunctionByName(FunctionTable table, char *name) {
     return -1;
 }
 
-void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTable functionTable) 
+void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTable functionTable, TypeTable typeTable) 
 {
     bool stop = false;
 
@@ -333,6 +341,59 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
         }
         break;
 
+        case NEWSTRUCT: {
+            assert(instruction.operand != -1);
+            Type type = typeTable.types[instruction.operand];
+            unsigned int size = type.size;
+            int address = vm.heapPointer;
+            assert((vm.heapPointer + size) < HEAP_SIZE);
+
+            // go thorugh field and intial the field
+            // for(int n = 0; n < type.fieldList.count; n++) {
+            //     Symbol symbol = type.fieldList.symbols[n];
+            //     Type fieldType = typeTable.types[symbol.typeTableIndex];
+            //     bool isPrimitive = symbol.typeTableIndex == GetTypeTableIndexForId(&typeTable, "int") ||
+            //                         symbol.typeTableIndex == GetTypeTableIndexForId(&typeTable, "bool");
+            //     int defaultValue = 0;
+            //     if(!isPrimitive) {
+            //         defaultValue = HEAP_SIZE;
+            //     } 
+            //     vm.heap[vm.heapPointer + n] = defaultValue;
+            // }
+            
+            vm.heapPointer += size;
+            vm.stack[++vm.stackPointer] = address;
+            vm.instrPointer++;
+        }
+        break;
+
+        case GETFIELD: {
+            assert(vm.stackPointer > -1);
+            int address =  vm.stack[vm.stackPointer];
+            assert(address < HEAP_SIZE);
+            int offset = instruction.operand;
+            int value = vm.heap[address + offset];
+            vm.stack[vm.stackPointer] = value;
+            vm.instrPointer++;
+        }
+        break;
+        
+        case PUTFIELD: {
+            assert(vm.stackPointer > 1);
+            int address =  vm.stack[vm.stackPointer--];
+            assert(address < HEAP_SIZE);
+            int value = vm.stack[vm.stackPointer--];
+            int offset = instruction.operand;
+            vm.heap[address + offset] = value;
+            vm.instrPointer++;
+        }
+        break;
+
+        case NEWARRAY: {
+            vm.instrPointer++;
+        }
+        break;
+
         case PRINT:
         {
             assert(vm.stackPointer > -1);
@@ -361,21 +422,30 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
         break;  
 
         }
-    
     }
+
+    // printf("HEAP\n");
+    // for(int n = 0; n < vm.heapPointer; n++) {
+    //     printf("[%d] %d\n", n, vm.heap[n]);
+    // }
+
 }
 
 StackVM InitVM() {
     StackVM vm = {0};
     vm.instrPointer = 0;
     vm.stackPointer = -1;
-    vm.heapPointer = -1;
+
+    // NOTE: heap at address 0 is reserved for null
+    vm.heapPointer = 1;
     vm.framePointer = -1;
     return vm;
 }
 
 void PrintInstruction(FILE *file, Instruction *instructions, int count, bool showLineNumbers) {
+
     for (int n = 0; n < count; n++) {
+
         Instruction instruction = instructions[n];
 
         if (showLineNumbers) {
@@ -409,6 +479,11 @@ void PrintInstruction(FILE *file, Instruction *instructions, int count, bool sho
 
         case CALL:   fprintf(file, "CALL %d\n", instruction.operand); break;
         case RET:   fprintf(file, "RET\n"); break;
+
+        case NEWSTRUCT:   fprintf(file, "NEWSTRUCT %d\n", instruction.operand); break;
+        case NEWARRAY:   fprintf(file, "NEWARRAY %d\n", instruction.operand); break;
+        case GETFIELD:   fprintf(file, "GETFIELD %d\n", instruction.operand); break;
+        case PUTFIELD:   fprintf(file, "PUTFIELD %d\n", instruction.operand); break;
 
         case PRINT: fprintf(file, "PRINT\n"); break;
         case HALT:  fprintf(file, "HALT\n"); break;

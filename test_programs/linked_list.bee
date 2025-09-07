@@ -1,0 +1,40 @@
+struct LinkedList {
+    data: int;
+    next: LinkedList;    
+}
+
+fn append(list: LinkedList, value: int) {
+    let node = list;
+    while(node.next != 0) {
+        node = node.next;
+    }
+    node.next = make(LinkedList);
+    node.next.data = value;
+    return;   
+}
+
+fn print_list(list:  LinkedList) {
+    let node = list;
+    while(node != 0) {
+        print(node.data);
+        node = node.next;
+    }
+    return;
+}
+
+fn main() {
+
+    let root = make(LinkedList);
+    root.data = 0;
+
+    let n = 1;
+
+    while (n <= 100) {
+        append(root, n * 10);
+        n = n + 1;
+    }
+
+    print_list(root);
+
+    return;
+}
