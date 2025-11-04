@@ -12,6 +12,7 @@ enum InstructionType {
     POP,
     STORE,
     LOAD,    
+    DUP,
 
     ADD,
     SUB,
@@ -101,164 +102,174 @@ int GetFunctionByName(FunctionTable table, char *name) {
     return -1;
 }
 
-void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTable functionTable, TypeTable typeTable) 
+void execute(StackVM *vm, Instruction *instructions, int instrCount, FunctionTable functionTable, TypeTable typeTable) 
 {
     bool stop = false;
 
     while(!stop) {
 
-        if (vm.instrPointer == instrCount) break;
+        if (vm->instrPointer == instrCount) break;
 
-        // printf("IP: %d\n", vm.instrPointer);
+        // printf("IP: %d\n", vm->instrPointer);
 
-        Instruction instruction = instructions[vm.instrPointer];
+        Instruction instruction = instructions[vm->instrPointer];
         
         switch (instruction.type)
         {
 
         case PUSH:
         {
-            vm.stackPointer++;
-            vm.stack[vm.stackPointer] = instruction.operand;
-            vm.instrPointer++;
+            vm->stackPointer++;
+            vm->stack[vm->stackPointer] = instruction.operand;
+            vm->instrPointer++;
         }
         break;
 
         case POP:
         {
-            vm.stackPointer--;
-            vm.instrPointer++;
+            vm->stackPointer--;
+            vm->instrPointer++;
         }
         break;
 
         case LOAD:
         {
             assert(instruction.operand > -1);
-            assert(vm.framePointer > -1);
-            StackFrame frame = vm.frames[vm.framePointer];
-            vm.stackPointer++;
-            vm.stack[vm.stackPointer] = vm.stack[frame.start + instruction.operand];
-            vm.instrPointer++;
+            assert(vm->framePointer > -1);
+            StackFrame frame = vm->frames[vm->framePointer];
+            vm->stackPointer++;
+            vm->stack[vm->stackPointer] = vm->stack[frame.start + instruction.operand];
+            vm->instrPointer++;
         }
         break;
 
         case STORE:
         {
-            assert(vm.framePointer > -1);
-            StackFrame frame = vm.frames[vm.framePointer];
-            vm.stack[frame.start + instruction.operand]  = vm.stack[vm.stackPointer];
-            vm.stackPointer--;
-            vm.instrPointer++;
+            assert(vm->framePointer > -1);
+            StackFrame frame = vm->frames[vm->framePointer];
+            vm->stack[frame.start + instruction.operand]  = vm->stack[vm->stackPointer];
+            vm->stackPointer--;
+            vm->instrPointer++;
+        }
+        break;
+
+        case DUP:
+        {
+            assert(vm->stackPointer > -1);
+            int value = vm->stack[vm->stackPointer];
+            vm->stackPointer++;
+            vm->stack[vm->stackPointer] = value;
+            vm->instrPointer++;
         }
         break;
 
         case ADD:
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] + vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;    
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] + vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;    
+            vm->instrPointer++;
         }
         break;
 
         case SUB: 
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] - vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;            
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] - vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
         }
         break;
 
         case MUL: 
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] * vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;            
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] * vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
         }
         break;
 
         case DIV: 
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] / vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;            
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] / vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
         }
         break;
 
         case MOD: 
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] % vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;            
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] % vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
         }
         break;
 
         case EQ: 
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] == vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;            
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] == vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
         }
         break;
 
         case NEQ: 
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] != vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;            
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] != vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
         }
         break;
 
         case LT: 
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] < vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;            
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] < vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
         }
         break;
 
         case GT: 
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] > vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;            
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] > vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
         }
         break;
 
         case LE: 
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] <= vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;            
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] <= vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
         }
         break;
 
         case GE: 
         {
-            assert(vm.stackPointer > 0);
-            int result = vm.stack[vm.stackPointer - 1] >= vm.stack[vm.stackPointer];
-            vm.stackPointer -= 2;
-            vm.stack[++vm.stackPointer] = result;            
-            vm.instrPointer++;
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] >= vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
         }
         break;
 
@@ -266,20 +277,20 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
         {
             assert(instruction.operand < instrCount);
             assert(instruction.operand > -1);
-            vm.instrPointer = instruction.operand;
+            vm->instrPointer = instruction.operand;
         }
         break;
 
         case JZ:
         {
             assert(instruction.operand > -1);
-            int value = vm.stack[vm.stackPointer--];
+            int value = vm->stack[vm->stackPointer--];
             if (value == 0) {
                 assert(instruction.operand < instrCount);
                 assert(instruction.operand > -1);
-                vm.instrPointer = instruction.operand;
+                vm->instrPointer = instruction.operand;
             } else {
-                vm.instrPointer++;
+                vm->instrPointer++;
             }
         }
         break;
@@ -287,13 +298,13 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
         case JNZ:
         {
             assert(instruction.operand > -1);
-            int value = vm.stack[vm.stackPointer--];
+            int value = vm->stack[vm->stackPointer--];
             if (value != 0) {
                 assert(instruction.operand < instrCount);
                 assert(instruction.operand > -1);
-                vm.instrPointer = instruction.operand;
+                vm->instrPointer = instruction.operand;
             } else {
-                vm.instrPointer++;
+                vm->instrPointer++;
             }
         }
         break;
@@ -310,34 +321,34 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
                 int paramsCount = function.paramsCount;                
                 
                 StackFrame frame = {0};
-                frame.returnAddr = vm.instrPointer + 1;
-                frame.start = vm.stackPointer - paramsCount + 1;
+                frame.returnAddr = vm->instrPointer + 1;
+                frame.start = vm->stackPointer - paramsCount + 1;
                 
                 int localsCount = function.localsCount;
-                vm.stackPointer += localsCount;
+                vm->stackPointer += localsCount;
 
-                vm.framePointer++;
-                assert(vm.framePointer < 100);
-                vm.frames[vm.framePointer] = frame;
+                vm->framePointer++;
+                assert(vm->framePointer < 100);
+                vm->frames[vm->framePointer] = frame;
 
-                vm.instrPointer = instruction.operand;
+                vm->instrPointer = instruction.operand;
 
             } else {
-                printf("unable to call function %d at IP: %d\n", instruction.operand, vm.instrPointer);
-                vm.instrPointer++;
+                printf("unable to call function %d at IP: %d\n", instruction.operand, vm->instrPointer);
+                vm->instrPointer++;
             }
         }
         break;
 
         case RET:
         {
-            assert(vm.framePointer > -1);
-            StackFrame frame = vm.frames[vm.framePointer];
-            vm.stack[frame.start] = vm.stack[vm.stackPointer];
-            vm.stackPointer = frame.start;
-            vm.instrPointer = frame.returnAddr;
+            assert(vm->framePointer > -1);
+            StackFrame frame = vm->frames[vm->framePointer];
+            vm->stack[frame.start] = vm->stack[vm->stackPointer];
+            vm->stackPointer = frame.start;
+            vm->instrPointer = frame.returnAddr;
             assert(frame.returnAddr > -1);
-            vm.framePointer--;
+            vm->framePointer--;
         }
         break;
 
@@ -345,8 +356,8 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
             assert(instruction.operand != -1);
             Type type = typeTable.types[instruction.operand];
             unsigned int size = type.size;
-            int address = vm.heapPointer;
-            assert((vm.heapPointer + size) < HEAP_SIZE);
+            int address = vm->heapPointer;
+            assert((vm->heapPointer + size) < HEAP_SIZE);
 
             // go thorugh field and intial the field
             // for(int n = 0; n < type.fieldList.count; n++) {
@@ -361,44 +372,44 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
             //     vm.heap[vm.heapPointer + n] = defaultValue;
             // }
             
-            vm.heapPointer += size;
-            vm.stack[++vm.stackPointer] = address;
-            vm.instrPointer++;
+            vm->heapPointer += size;
+            vm->stack[++vm->stackPointer] = address;
+            vm->instrPointer++;
         }
         break;
 
         case GETFIELD: {
-            assert(vm.stackPointer > -1);
-            int address =  vm.stack[vm.stackPointer];
+            assert(vm->stackPointer > -1);
+            int address =  vm->stack[vm->stackPointer];
             assert(address < HEAP_SIZE);
             int offset = instruction.operand;
-            int value = vm.heap[address + offset];
-            vm.stack[vm.stackPointer] = value;
-            vm.instrPointer++;
+            int value = vm->heap[address + offset];
+            vm->stack[vm->stackPointer] = value;
+            vm->instrPointer++;
         }
         break;
         
         case PUTFIELD: {
-            assert(vm.stackPointer > 1);
-            int address =  vm.stack[vm.stackPointer--];
+            assert(vm->stackPointer > 1);
+            int address =  vm->stack[vm->stackPointer--];
             assert(address < HEAP_SIZE);
-            int value = vm.stack[vm.stackPointer--];
+            int value = vm->stack[vm->stackPointer--];
             int offset = instruction.operand;
-            vm.heap[address + offset] = value;
-            vm.instrPointer++;
+            vm->heap[address + offset] = value;
+            vm->instrPointer++;
         }
         break;
 
         case NEWARRAY: {
-            vm.instrPointer++;
+            vm->instrPointer++;
         }
         break;
 
         case PRINT:
         {
-            assert(vm.stackPointer > -1);
-            printf("%d\n", vm.stack[vm.stackPointer]);
-            vm.instrPointer++;
+            assert(vm->stackPointer > -1);
+            printf("%d\n", vm->stack[vm->stackPointer]);
+            vm->instrPointer++;
         }
         break;
 
@@ -410,7 +421,7 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
 
         case NOP:
         {
-            vm.instrPointer++;
+            vm->instrPointer++;
         }
         break;
         
@@ -425,8 +436,8 @@ void execute(StackVM vm, Instruction *instructions, int instrCount, FunctionTabl
     }
 
     // printf("HEAP\n");
-    // for(int n = 0; n < vm.heapPointer; n++) {
-    //     printf("[%d] %d\n", n, vm.heap[n]);
+    // for(int n = 0; n < vm->heapPointer; n++) {
+    //     printf("[%d] %d\n", n, vm->heap[n]);
     // }
 
 }
@@ -459,6 +470,7 @@ void PrintInstruction(FILE *file, Instruction *instructions, int count, bool sho
         case POP:   fprintf(file, "POP\n"); break;
         case LOAD:  fprintf(file, "LOAD %d\n", instruction.operand); break;
         case STORE: fprintf(file, "STORE %d\n", instruction.operand); break;
+        case DUP:   fprintf(file, "DUP\n"); break;
 
         case ADD:   fprintf(file, "ADD\n"); break;
         case SUB:   fprintf(file, "SUB\n"); break;

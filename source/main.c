@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 
             PrintInstruction(stdout, instructions, instrCount, true);
 
-            execute(vm, instructions, instrCount, functionTable, globalTypeTable);
+            execute(&vm, instructions, instrCount, functionTable, globalTypeTable);
             
             free(loadedFile.source.data);
             free(loadedFile.path.data);
