@@ -26,6 +26,9 @@ enum InstructionType {
     GE,
     LE,
     NEQ,
+    AND,
+    OR,
+    NOT,
 
     JMP,
     JZ,
@@ -84,7 +87,7 @@ typedef struct {
 
 } StackVM;
 
-int GetFunctionByAddress(FunctionTable table, int address) {
+int  GetFunctionByAddress(FunctionTable table, int address) {
     for(int n = 0; n < table.count; n++) {
         if(address == table.functions[n].startAddress) {
             return n;
@@ -223,7 +226,7 @@ void execute(StackVM *vm, Instruction *instructions, int instrCount, FunctionTab
         }
         break;
 
-        case NEQ: 
+        case NEQ:
         {
             assert(vm->stackPointer > 0);
             int result = vm->stack[vm->stackPointer - 1] != vm->stack[vm->stackPointer];
@@ -269,6 +272,35 @@ void execute(StackVM *vm, Instruction *instructions, int instrCount, FunctionTab
             int result = vm->stack[vm->stackPointer - 1] >= vm->stack[vm->stackPointer];
             vm->stackPointer -= 2;
             vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
+        }
+        break;
+
+        case AND: 
+        {
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] && vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
+        }
+        break;
+
+        case OR: 
+        {
+            assert(vm->stackPointer > 0);
+            int result = vm->stack[vm->stackPointer - 1] || vm->stack[vm->stackPointer];
+            vm->stackPointer -= 2;
+            vm->stack[++vm->stackPointer] = result;            
+            vm->instrPointer++;
+        }
+        break;
+
+        case NOT: 
+        {
+            assert(vm->stackPointer > -1);
+            int result = !vm->stack[vm->stackPointer];
+            vm->stack[vm->stackPointer] = result;            
             vm->instrPointer++;
         }
         break;
@@ -484,6 +516,9 @@ void PrintInstruction(FILE *file, Instruction *instructions, int count, bool sho
         case GE:    fprintf(file, "GE\n"); break;
         case LE:    fprintf(file, "LE\n"); break;
         case NEQ:    fprintf(file, "NEQ\n"); break;
+        case AND:    fprintf(file, "AND\n"); break;
+        case OR:    fprintf(file, "OR\n"); break;
+        case NOT:    fprintf(file, "NOT\n"); break;
 
         case JMP:   fprintf(file, "JMP %d\n", instruction.operand); break;
         case JZ:    fprintf(file, "JZ %d\n", instruction.operand); break;

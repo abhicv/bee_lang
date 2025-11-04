@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
             AddInstr(INSTR(CALL, functions[mainFunctionIndex].startAddress));
             AddInstr(INSTR(HALT, 0));
 
-            PrintInstruction(stdout, instructions, instrCount, true);
+            // PrintInstruction(stdout, instructions, instrCount, true);
 
             execute(&vm, instructions, instrCount, functionTable, globalTypeTable);
             

@@ -1,6 +1,6 @@
 fn main() {
     print(factorial(5));
-    print(recu_factorial(12));
+    print(recu_factorial(5));
     return;
 }
 

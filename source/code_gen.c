@@ -299,6 +299,18 @@ void GenerateCode(AST ast, Index index, TypeTable typeTable, int currentFunction
             case COMPARE_OP_NOT_EQ:
                 AddInstr(INSTR(NEQ, 0));
                 break;
+
+            case BOOL_OP_AND:
+                AddInstr(INSTR(AND, 0));
+                break;
+
+            case BOOL_OP_OR:
+                AddInstr(INSTR(OR, 0));
+                break;
+
+            case BOOL_OP_NOT:
+                AddInstr(INSTR(NOT, 0));
+                break;
                 
             default:
                 printf("Unsupported operator for code generation\n");

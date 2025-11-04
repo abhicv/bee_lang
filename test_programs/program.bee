@@ -1,5 +1,5 @@
 fn main () : int {
-    print(factorial(5));
+    print(factorial(6));
     return 0;
 }
 
